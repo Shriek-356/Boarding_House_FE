@@ -36,6 +36,7 @@ const LoginScreen = ({ navigation }) => {
             navigation.navigate('Home');
         } catch (error) {
             console.log('Đăng nhập khó:', error.response.data);
+            Toast.show('Đăng nhập khó', Toast.LONG);
         } finally {
             setIsLoading(false);
         }
