@@ -8,8 +8,7 @@ export const loginApi = async (data) => {
     try {
         const response = await axiosInstance.post(endpoints.login, data)
         return response.data;
-    } catch (error) {
-        console.error("Error logging in:", error);
+    } catch (error) {     
         throw error;
     }
 };

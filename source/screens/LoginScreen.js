@@ -6,10 +6,11 @@ import { useState } from 'react';
 import * as yup from 'yup';
 import { loginApi } from '../api/authApi';
 import LottieView from 'lottie-react-native';//Lottie animation
+import Toast from 'react-native-toast-message';
 
 // Schema validate
 const schema = yup.object().shape({
-    email: yup.string().email('Email không hợp lệ').required('Vui lòng nhập email'),
+    username: yup.string().required('Vui lòng nhập tên đăng nhập'),
     password: yup.string().min(6, 'Mật khẩu ít nhất 6 ký tự').required('Vui lòng nhập mật khẩu'),
 });
 
@@ -30,18 +31,46 @@ const LoginScreen = ({ navigation }) => {
     const onSubmit = async (data) => {
         console.log('Dữ liệu hợp lệ:', data);
         setIsLoading(true);
+
         try {
             const response = await loginApi(data);
-            console.log('Đăng nhập thành công:', response);
+            Toast.show({
+                type: 'success',
+                text1: 'Đăng nhập thành công',
+                text2: '',
+                position: 'bottom',
+            });
             navigation.navigate('Home');
         } catch (error) {
-            console.log('Đăng nhập khó:', error.response.data);
-            Toast.show('Đăng nhập khó', Toast.LONG);
+            // Xử lý lỗi an toàn
+            let message = 'Đã xảy ra lỗi không xác định.';
+
+            if (error.response) {
+                // Lỗi từ phía server (backend trả về)
+                if (typeof error.response.data === 'string') {
+                    message = error.response.data;
+                } else if (error.response.data.message) {
+                    message = error.response.data.message;
+                } else {
+                    message = JSON.stringify(error.response.data);
+                }
+            } else if (error.request) {
+                // Request đã gửi đi nhưng không nhận được phản hồi
+                message = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.';
+            } else {
+                // Lỗi khi thiết lập request
+                message = error.message;
+            }
+
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi đăng nhập',
+                text2: message,
+                position: 'bottom',
+            });
         } finally {
             setIsLoading(false);
         }
-        // TODO: Gọi API login, nếu thành công thì chuyển màn hình:
-        // navigation.navigate('Home');
     };
 
     return (
@@ -62,25 +91,25 @@ const LoginScreen = ({ navigation }) => {
 
                     <Controller
                         control={control}
-                        name="email"
+                        name="username"
                         render={({ field: { onChange, onBlur, value } }) => (
                             <TextInput
-                                label="Email"
+                                label="Tên đăng nhập"
                                 mode="outlined"
-                                left={<TextInput.Icon icon="email-outline" />}
+                                left={<TextInput.Icon icon="account-outline" />}
                                 value={value}
                                 onBlur={onBlur}
                                 onChangeText={onChange}
-                                error={!!errors.email}
+                                error={!!errors.username}
                                 style={styles.input}
                                 outlineStyle={styles.inputOutline}
                                 activeOutlineColor={theme.colors.primary}
                                 autoCapitalize="none"
-                                keyboardType="email-address"
+                                keyboardType="default"
                             />
                         )}
                     />
-                    {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}
+                    {errors.username && <Text style={styles.error}>{errors.username.message}</Text>}
 
                     <Controller
                         control={control}
@@ -135,7 +164,7 @@ const LoginScreen = ({ navigation }) => {
                             source={animationSource}
                             autoPlay
                             loop
-                            style={{ width: 800, height: 800 }}
+                            style={{ width: 200, height: 200 }}
                         />
                         <Text style={styles.loadingText}>Đang đăng nhập...</Text>
                     </View>
