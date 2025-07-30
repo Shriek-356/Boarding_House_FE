@@ -38,7 +38,7 @@ const LoginScreen = ({ navigation }) => {
                 text2: '',
                 position: 'bottom',
             });
-            navigation.navigate('Home');
+            navigation.navigate('MainTab');
         } catch (error) {
             // Xử lý lỗi an toàn
             let message = 'Đã xảy ra lỗi không xác định.';

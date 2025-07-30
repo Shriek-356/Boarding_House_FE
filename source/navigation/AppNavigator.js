@@ -4,7 +4,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SplashScreen from '../screens/SplashScreen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../configs/toastConfig';
-import MainTabNavigator from './MainTabNavigator'; // Import the main tab navigator
+import MainTabNavigator from './MainTabNavigator';
 
 const Stack = createNativeStackNavigator();
 
@@ -15,6 +15,7 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="MainTab" component={MainTabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast config={toastConfig} />
