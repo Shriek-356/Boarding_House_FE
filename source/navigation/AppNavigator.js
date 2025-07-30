@@ -4,6 +4,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SplashScreen from '../screens/SplashScreen';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../configs/toastConfig';
+import MainTabNavigator from './MainTabNavigator'; // Import the main tab navigator
 
 const Stack = createNativeStackNavigator();
 

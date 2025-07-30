@@ -29,9 +29,7 @@ const LoginScreen = ({ navigation }) => {
     });
 
     const onSubmit = async (data) => {
-        console.log('Dữ liệu hợp lệ:', data);
         setIsLoading(true);
-
         try {
             const response = await loginApi(data);
             Toast.show({
