@@ -1,4 +1,3 @@
-// screens/HomeScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -8,10 +7,10 @@ import {
   ImageBackground,
   FlatList,
   ScrollView,
-  Image
+  Image,
 } from 'react-native';
 import { Button } from 'react-native-paper';
-import SearchFilterBar from '../components/SearchFilterBarComponent';
+import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 
 const mockPosts = [
   {
@@ -33,26 +32,31 @@ const mockPosts = [
 const HomeScreen = () => {
   const [searchText, setSearchText] = useState('');
 
-  const handleFilterSearch = (filters) => {
-    console.log('Tìm kiếm với bộ lọc:', filters);
-    // Gọi API ở đây nếu cần
-  };
-
   return (
     <ScrollView style={styles.container}>
+      {/* Ảnh nền phía trên */}
       <ImageBackground
         source={require('../../assets/images/logo.avif')}
         style={styles.banner}
         imageStyle={{ borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}
       >
-        <View style={styles.overlay}>
-          <Text style={styles.bannerText}>Tìm chỗ ở phù hợp</Text>
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Bạn muốn tìm trọ ở đâu?"
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          <Button mode="contained" style={styles.searchButton}>
+            Tìm kiếm
+          </Button>
         </View>
       </ImageBackground>
 
-      {/* Thanh lọc */}
-      <SearchFilterBar onSearch={handleFilterSearch} />
+      {/* Thanh lọc trọ */}
+      <SearchFilterBarComponent />
 
+      {/* Danh sách trọ */}
       <Text style={styles.sectionTitle}>Danh sách phòng trọ</Text>
       <FlatList
         data={mockPosts}
@@ -79,19 +83,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   banner: {
-    height: 180,
+    height: 240,
     justifyContent: 'flex-end',
-  },
-  overlay: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
     padding: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
-  bannerText: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: '700',
+  searchContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+    fontSize: 16,
+  },
+  searchButton: {
+    borderRadius: 8,
+    backgroundColor: '#007BFF',
   },
   sectionTitle: {
     fontSize: 20,

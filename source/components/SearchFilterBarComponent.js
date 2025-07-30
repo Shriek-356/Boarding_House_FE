@@ -1,90 +1,148 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import LocationFilterModal from './LocationFilterModal';
-import PriceFilterModal from './PriceFilterModal';
-import AreaFilterModal from './AreaFilterModal';
+import AreaFilterModal from '../modals/AreaFilterModal';
+import PriceFilterModal from '../modals/PriceFilterModal';
+import LocationFilterModal from '../modals/LocationFilterModal';
 
 const SearchFilterBarComponent = () => {
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showPriceModal, setShowPriceModal] = useState(false);
-  const [showAreaModal, setShowAreaModal] = useState(false);
+  const [locationVisible, setLocationVisible] = useState(false);
+  const [priceVisible, setPriceVisible] = useState(false);
+  const [areaVisible, setAreaVisible] = useState(false);
+  // Thêm state để lưu trữ địa điểm đã chọn
+  const [selectedLocationDisplay, setSelectedLocationDisplay] = useState('Địa điểm');
+
+  const handleLocationSelect = (province, district) => {
+    let display = 'Địa điểm';
+    if (district) {
+      display = `${district}, ${province}`;
+    } else if (province) {
+      display = province;
+    }
+    setSelectedLocationDisplay(display);
+    setLocationVisible(false); // Đóng modal sau khi chọn
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Địa điểm */}
-      <TouchableOpacity style={styles.filterItem} onPress={() => setShowLocationModal(true)}>
-        <Icon name="map-marker" size={20} color="#00BFFF" />
-        <Text style={styles.filterText}>Địa điểm</Text>
-        <Icon name="chevron-down" size={16} />
-      </TouchableOpacity>
+    <View style={styles.searchBarContainer}>
+      <View style={styles.filterItemsWrapper}>
+        {/* Nút Địa điểm - Hiển thị giá trị đã chọn */}
+        <TouchableOpacity style={[styles.filterItem, styles.filterItemLeft]} onPress={() => setLocationVisible(true)}>
+          <Icon name="map-marker-outline" size={20} color="#007AFF" />
+          <View style={styles.filterTextContainer}>
+            <Text style={styles.filterLabel}>{selectedLocationDisplay}</Text>
+            <Icon name="chevron-down" size={20} color="#666" />
+          </View>
+        </TouchableOpacity>
 
-      {/* Mức giá */}
-      <TouchableOpacity style={styles.filterItem} onPress={() => setShowPriceModal(true)}>
-        <Icon name="currency-usd" size={20} color="#00BFFF" />
-        <Text style={styles.filterText}>Mức giá</Text>
-        <Icon name="chevron-down" size={16} />
-      </TouchableOpacity>
+        {/* Nút Mức giá */}
+        <TouchableOpacity style={styles.filterItem} onPress={() => setPriceVisible(true)}>
+          <Icon name="currency-usd" size={20} color="#007AFF" />
+          <View style={styles.filterTextContainer}>
+            <Text style={styles.filterLabel}>Mức giá</Text>
+            <Icon name="chevron-down" size={20} color="#666" />
+          </View>
+        </TouchableOpacity>
 
-      {/* Diện tích */}
-      <TouchableOpacity style={styles.filterItem} onPress={() => setShowAreaModal(true)}>
-        <Text style={[styles.filterText, { color: '#00BFFF' }]}>m² Diện tích</Text>
-        <Icon name="chevron-down" size={16} />
-      </TouchableOpacity>
+        {/* Nút Diện tích */}
+        <TouchableOpacity style={[styles.filterItem, styles.filterItemRight]} onPress={() => setAreaVisible(true)}>
+          <Icon name="ruler-square" size={20} color="#007AFF" />
+          <View style={styles.filterTextContainer}>
+            <Text style={styles.filterLabel}>Diện tích</Text>
+            <Icon name="chevron-down" size={20} color="#666" />
+          </View>
+        </TouchableOpacity>
+      </View>
 
-      {/* Nút tìm kiếm */}
       <TouchableOpacity style={styles.searchButton}>
-        <Icon name="magnify" size={18} color="#fff" />
-        <Text style={styles.searchText}>Tìm kiếm</Text>
+        <Icon name="magnify" size={24} color="#fff" />
+        <Text style={styles.searchButtonText}>Tìm kiếm</Text>
       </TouchableOpacity>
 
-      {/* Các modal */}
-      <LocationFilterModal visible={showLocationModal} onClose={() => setShowLocationModal(false)} />
-      <PriceFilterModal visible={showPriceModal} onClose={() => setShowPriceModal(false)} />
-      <AreaFilterModal visible={showAreaModal} onClose={() => setShowAreaModal(false)} />
+      {/* Truyền hàm callback xuống LocationFilterModal */}
+      <LocationFilterModal
+        visible={locationVisible}
+        onClose={() => setLocationVisible(false)}
+        onSelectLocation={handleLocationSelect} // Truyền hàm này
+      />
+      <PriceFilterModal visible={priceVisible} onClose={() => setPriceVisible(false)} />
+      <AreaFilterModal visible={areaVisible} onClose={() => setAreaVisible(false)} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  searchBarContainer: {
+    backgroundColor: '#F8F8F8',
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginHorizontal: 15,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  filterItemsWrapper: {
     flexDirection: 'row',
-    backgroundColor: '#004AAD',
-    padding: 8,
+    backgroundColor: '#fff',
     borderRadius: 8,
-    margin: 12,
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   filterItem: {
-    backgroundColor: '#fff',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRightWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  filterText: {
-    marginLeft: 4,
-    marginRight: 4,
+  filterItemLeft: {
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  filterItemRight: {
+    borderRightWidth: 0,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  filterTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  filterLabel: {
     fontSize: 14,
-    color: '#555',
+    color: '#333',
+    fontWeight: '500',
   },
   searchButton: {
+    backgroundColor: '#FF5722',
     flexDirection: 'row',
-    backgroundColor: '#FF6600',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: 8,
+    shadowColor: '#FF5722',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  searchText: {
+  searchButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 4,
+    fontSize: 18,
+    marginLeft: 10,
   },
 });
 
