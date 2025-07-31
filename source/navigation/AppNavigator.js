@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 import { toastConfig } from '../configs/toastConfig';
 import MainTabNavigator from './MainTabNavigator';
 import SearchResultScreen from '../screens/SearchResultScreen';
+import BoardingDetailScreen from '../screens/BoardingZoneDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="MainTab" component={MainTabNavigator} />
         <Stack.Screen name="SearchResult" component={SearchResultScreen} />
+        <Stack.Screen name="BoardingZoneDetail" component={BoardingDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast config={toastConfig} />
