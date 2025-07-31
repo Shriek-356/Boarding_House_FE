@@ -1,100 +1,158 @@
-import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 
-const provinces = ['TP.HCM', 'Hà Nội', 'Đà Nẵng'];
-const districts = {
-  'TP.HCM': ['Quận 1', 'Quận 10', 'Gò Vấp'],
-  'Hà Nội': ['Cầu Giấy', 'Ba Đình', 'Thanh Xuân'],
-  'Đà Nẵng': ['Hải Châu', 'Sơn Trà', 'Thanh Khê'],
-};
+const LocationFilterModal = ({ visible, onClose, onSelect }) => {
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
 
-const LocationModal = ({ visible, onClose, onSelect }) => {
-  const [selectedProvince, setProvince] = useState(null);
-  const [selectedDistrict, setDistrict] = useState(null);
+  const [selectedProvince, setSelectedProvince] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [selectedWard, setSelectedWard] = useState(null);
 
-  const reset = () => {
-    setProvince(null);
-    setDistrict(null);
+  const [activeLevel, setActiveLevel] = useState(null); // 'province','district','ward'
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      reset();
+      fetchProvinces();
+    }
+  }, [visible]);
+
+  const fetchProvinces = async () => {
+    setLoading(true);
+    const r = await fetch('https://provinces.open-api.vn/api/?depth=1');
+    const data = await r.json();
+    setProvinces(data);
+    setLoading(false);
   };
 
-  const handleConfirm = () => {
-    if (selectedProvince && selectedDistrict) {
-      onSelect(selectedProvince, selectedDistrict);
+  const onSelectProvince = async (p) => {
+    setSelectedProvince(p);
+    setSelectedDistrict(null);
+    setSelectedWard(null);
+    setLoading(true);
+    const r = await fetch(`https://provinces.open-api.vn/api/p/${p.code}?depth=2`);
+    const data = await r.json();
+    setDistricts(data.districts);
+    setLoading(false);
+    setActiveLevel(null);
+  };
+
+  const onSelectDistrict = async (d) => {
+    setSelectedDistrict(d);
+    setSelectedWard(null);
+    setLoading(true);
+    const r = await fetch(`https://provinces.open-api.vn/api/d/${d.code}?depth=2`);
+    const data = await r.json();
+    setWards(data.wards);
+    setLoading(false);
+    setActiveLevel(null);
+  };
+
+  const onSelectWard = (w) => {
+    setSelectedWard(w);
+    setActiveLevel(null);
+  };
+
+  const reset = () => {
+    setSelectedProvince(null);
+    setSelectedDistrict(null);
+    setSelectedWard(null);
+    setDistricts([]);
+    setWards([]);
+    setActiveLevel(null);
+  };
+
+  const confirm = () => {
+    if (selectedProvince && selectedDistrict && selectedWard) {
+      onSelect({ province: selectedProvince, district: selectedDistrict, ward: selectedWard });
       onClose();
     }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.modal}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Chọn địa điểm</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} />
-            </TouchableOpacity>
-          </View>
+        <View style={styles.container}>
+          <Text style={styles.title}>Chọn địa điểm</Text>
 
-          {/* Province Selection */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Tỉnh/Thành phố</Text>
-            <View style={styles.options}>
-              {provinces.map(province => (
-                <TouchableOpacity
-                  key={province}
-                  style={[
-                    styles.option,
-                    selectedProvince === province && styles.selected
-                  ]}
-                  onPress={() => {
-                    setProvince(province);
-                    setDistrict(null);
-                  }}
-                >
-                  <Text style={selectedProvince === province && styles.selectedText}>
-                    {province}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <TouchableOpacity style={styles.box} onPress={() => setActiveLevel('province')}>
+            <Text style={styles.boxText}>
+              {selectedProvince ? selectedProvince.name : 'Chọn Tỉnh/Thành phố'}
+            </Text>
+          </TouchableOpacity>
 
-          {/* District Selection */}
-          {selectedProvince && (
-            <View style={styles.section}>
-              <Text style={styles.label}>Quận/Huyện</Text>
-              <View style={styles.options}>
-                {districts[selectedProvince].map(district => (
-                  <TouchableOpacity
-                    key={district}
-                    style={[
-                      styles.option,
-                      selectedDistrict === district && styles.selected
-                    ]}
-                    onPress={() => setDistrict(district)}
-                  >
-                    <Text style={selectedDistrict === district && styles.selectedText}>
-                      {district}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          <TouchableOpacity
+            style={styles.box}
+            onPress={() => selectedProvince && setActiveLevel('district')}
+            disabled={!selectedProvince}
+          >
+            <Text style={[styles.boxText, !selectedProvince && styles.disabled]}>
+              {selectedDistrict ? selectedDistrict.name : 'Chọn Quận/Huyện'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.box}
+            onPress={() => selectedDistrict && setActiveLevel('ward')}
+            disabled={!selectedDistrict}
+          >
+            <Text style={[styles.boxText, !selectedDistrict && styles.disabled]}>
+              {selectedWard ? selectedWard.name : 'Chọn Phường/Xã'}
+            </Text>
+          </TouchableOpacity>
+
+          {activeLevel && (
+            <View style={styles.listContainer}>
+              {loading ? (
+                <ActivityIndicator />
+              ) : (
+                <ScrollView style={{ maxHeight: 200 }}>
+                  {(activeLevel === 'province'
+                    ? provinces
+                    : activeLevel === 'district'
+                    ? districts
+                    : wards
+                  ).map((item) => (
+                    <TouchableOpacity
+                      key={item.code}
+                      style={styles.item}
+                      onPress={() =>
+                        activeLevel === 'province'
+                          ? onSelectProvince(item)
+                          : activeLevel === 'district'
+                          ? onSelectDistrict(item)
+                          : onSelectWard(item)
+                      }
+                    >
+                      <Text>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
           )}
 
-          {/* Actions */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.reset} onPress={reset}>
+            <TouchableOpacity style={styles.btnReset} onPress={reset}>
               <Text>Đặt lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.confirm, !selectedDistrict && styles.disabled]}
-              onPress={handleConfirm}
-              disabled={!selectedDistrict}
+            <TouchableOpacity
+              style={[styles.btnConfirm, !(selectedWard) && styles.disabledBtn]}
+              onPress={confirm}
+              disabled={!selectedWard}
             >
-              <Text style={styles.confirmText}>Xác nhận</Text>
+              <Text style={styles.textConfirm}>Xác nhận</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -106,76 +164,70 @@ const LocationModal = ({ visible, onClose, onSelect }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
-    alignItems: 'center'
-  },
-  modal: {
-    width: '90%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20
+  },
+  container: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: '600',
+    marginBottom: 12,
   },
-  section: {
-    marginBottom: 15
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 10,
-    fontWeight: '600'
-  },
-  options: {
-    flexDirection: 'row',
-    flexWrap: 'wrap'
-  },
-  option: {
-    padding: 10,
-    margin: 5,
+  box: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5
+    borderColor: '#ccc',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
   },
-  selected: {
-    backgroundColor: '#2196F3',
-    borderColor: '#2196F3'
+  boxText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  disabled: {
+    color: '#aaa',
+  },
+  listContainer: {
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    marginTop: 8,
+    paddingTop: 8,
+  },
+  item: {
+    paddingVertical: 10,
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20
+    marginTop: 16,
   },
-  reset: {
-    padding: 10,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 5,
+  btnReset: {
     flex: 1,
-    marginRight: 10,
-    alignItems: 'center'
-  },
-  confirm: {
     padding: 10,
+    borderRadius: 6,
+    backgroundColor: '#eee',
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  btnConfirm: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
     backgroundColor: '#2196F3',
-    borderRadius: 5,
-    flex: 1,
-    alignItems: 'center'
+    alignItems: 'center',
   },
-  disabled: {
-    backgroundColor: '#cccccc'
+  disabledBtn: {
+    backgroundColor: '#ccc',
   },
-  confirmText: {
-    color: 'white',
-    fontWeight: 'bold'
-  }
+  textConfirm: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
 
-export default LocationModal;
+export default LocationFilterModal;

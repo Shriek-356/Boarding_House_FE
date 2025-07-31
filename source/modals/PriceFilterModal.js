@@ -7,62 +7,31 @@ import {
   TouchableOpacity,
   TextInput,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const PriceFilterModal = ({ visible, onClose, onApply }) => {
-  const MIN_PRICE = 0;
-  const MAX_PRICE = 200;
-  const STEP = 1;
-
-  const [minValue, setMinValue] = useState(0);
-  const [maxValue, setMaxValue] = useState(50);
-  const [inputMin, setInputMin] = useState('0');
-  const [inputMax, setInputMax] = useState('50');
-  const [selectedPreset, setSelectedPreset] = useState(null);
+const PriceFilterModal = ({ visible, onClose, onSelect }) => {
+  const [inputMin, setInputMin] = useState('');
+  const [inputMax, setInputMax] = useState('');
 
   const minInputRef = useRef();
   const maxInputRef = useRef();
 
-  const pricePresets = [
-    { id: 'all', label: 'Tất cả mức giá' },
-    { id: 'under1', label: 'Dưới 1 triệu', min: 0, max: 1 },
-    { id: '1to10', label: '1 - 10 triệu', min: 1, max: 10 },
-    { id: '10to30', label: '10 - 30 triệu', min: 10, max: 30 },
-    { id: '30to50', label: '30 - 50 triệu', min: 30, max: 50 },
-    { id: 'over50', label: 'Trên 50 triệu', min: 50, max: MAX_PRICE },
-    { id: 'over100', label: 'Trên 100 triệu', min: 100, max: MAX_PRICE },
-  ];
-
-  const handleInputChange = (type, value) => {
-    const numValue = parseFloat(value) || 0;
-    if (type === 'min') {
-      const newMin = Math.min(numValue, maxValue);
-      setInputMin(value);
-      setMinValue(newMin);
-    } else {
-      const newMax = Math.max(numValue, minValue);
-      setInputMax(value);
-      setMaxValue(newMax);
-    }
-    setSelectedPreset(null);
-  };
-
-  const handlePresetSelect = (preset) => {
-    setSelectedPreset(preset.id);
-    setMinValue(preset.min);
-    setMaxValue(preset.max);
-    setInputMin(preset.min.toString());
-    setInputMax(preset.max.toString());
+  const handleManualApply = () => {
+    const min = parseFloat(inputMin) || 0;
+    const max = parseFloat(inputMax) || 0;
+    onSelect(
+      min * 1_000_000,
+      max * 1_000_000,
+      `${inputMin} - ${inputMax} triệu`
+    );
+    onClose();
   };
 
   const handleReset = () => {
-    setMinValue(MIN_PRICE);
-    setMaxValue(MAX_PRICE);
-    setInputMin(MIN_PRICE.toString());
-    setInputMax(MAX_PRICE.toString());
-    setSelectedPreset(null);
+    setInputMin('');
+    setInputMax('');
   };
 
   return (
@@ -77,15 +46,17 @@ const PriceFilterModal = ({ visible, onClose, onApply }) => {
               </TouchableOpacity>
             </View>
 
+            {/* Input Từ - Đến */}
             <View style={styles.priceInputContainer}>
               <View style={styles.priceInputWrapper}>
                 <Text style={styles.priceLabel}>Từ</Text>
                 <TextInput
                   ref={minInputRef}
-                  style={styles.priceInput}
                   value={inputMin}
-                  onChangeText={(text) => handleInputChange('min', text)}
+                  onChangeText={setInputMin}
                   keyboardType="numeric"
+                  style={styles.priceInput}
+                  placeholder="0"
                 />
                 <Text style={styles.priceUnit}>triệu</Text>
               </View>
@@ -94,36 +65,19 @@ const PriceFilterModal = ({ visible, onClose, onApply }) => {
                 <Text style={styles.priceLabel}>Đến</Text>
                 <TextInput
                   ref={maxInputRef}
-                  style={styles.priceInput}
                   value={inputMax}
-                  onChangeText={(text) => handleInputChange('max', text)}
+                  onChangeText={setInputMax}
                   keyboardType="numeric"
+                  style={styles.priceInput}
+                  placeholder="50"
                 />
                 <Text style={styles.priceUnit}>triệu</Text>
               </View>
             </View>
 
-            <View style={styles.presetsContainer}>
-              {pricePresets.map((preset) => (
-                <TouchableOpacity
-                  key={preset.id}
-                  style={[
-                    styles.presetButton,
-                    selectedPreset === preset.id && styles.selectedPreset
-                  ]}
-                  onPress={() => handlePresetSelect(preset)}
-                >
-                  <Text
-                    style={[
-                      styles.presetText,
-                      selectedPreset === preset.id && styles.selectedPresetText
-                    ]}
-                  >
-                    {preset.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity style={styles.manualApply} onPress={handleManualApply}>
+              <Text style={styles.manualApplyText}>Áp dụng</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
               <Text style={styles.resetText}>Đặt lại</Text>
@@ -138,31 +92,31 @@ const PriceFilterModal = ({ visible, onClose, onApply }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', // ✅ từ 'flex-end' → 'center'
+    alignItems: 'center',     // ✅ căn giữa ngang
   },
   modalContainer: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
+    padding: 16,
+    borderRadius: 16,
+    width: '90%',             // ✅ giới hạn chiều ngang
+    maxHeight: '80%',         // ✅ tránh tràn màn
   },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
   },
   priceInputContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginVertical: 10,
   },
   priceInputWrapper: {
     flexDirection: 'row',
@@ -171,52 +125,38 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 8,
     flex: 0.48,
   },
   priceLabel: {
-    marginRight: 5,
     color: '#666',
+    marginRight: 6,
   },
   priceInput: {
     flex: 1,
-    padding: 0,
     textAlign: 'right',
+    fontSize: 16,
+    padding: 8,
   },
   priceUnit: {
-    marginLeft: 5,
     color: '#666',
+    marginLeft: 4,
   },
-  presetsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  presetButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 20,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  selectedPreset: {
+  manualApply: {
+    marginTop: 16,
     backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  presetText: {
-    color: '#374151',
-  },
-  selectedPresetText: {
+  manualApplyText: {
     color: '#fff',
+    fontWeight: 'bold',
   },
   resetButton: {
-    paddingVertical: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
+    marginTop: 10,
+    backgroundColor: '#E5E7EB',
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
   resetText: {

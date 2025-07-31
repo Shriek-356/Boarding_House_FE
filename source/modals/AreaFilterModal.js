@@ -10,12 +10,19 @@ const areaRanges = [
   { label: 'Trên 50m²', value: { min: 50, max: Infinity } },
 ];
 
-const AreaFilterModal = ({ visible, onClose }) => {
+const AreaFilterModal = ({ visible, onClose, onSelect }) => {
   const [selectedArea, setSelectedArea] = useState(null);
 
   const handleSelect = (range) => {
     setSelectedArea(range);
-    onClose(); // đóng modal sau khi chọn
+    onSelect(range); // Gửi về parent
+    onClose();        // Đóng modal
+  };
+
+  const handleReset = () => {
+    setSelectedArea(null);
+    onSelect(null); // Gửi null để xóa lựa chọn
+    onClose();      // Đóng modal
   };
 
   return (
@@ -52,6 +59,11 @@ const AreaFilterModal = ({ visible, onClose }) => {
             )}
             contentContainerStyle={styles.listContainer}
           />
+
+          {/* Nút Đặt lại */}
+          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+            <Text style={styles.resetText}>Đặt lại</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -62,14 +74,15 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center', // ✅ từ 'flex-end' → 'center'
+    alignItems: 'center',     // ✅ căn giữa ngang
   },
   modalContainer: {
     backgroundColor: '#fff',
     padding: 16,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '60%',
+    borderRadius: 16,
+    width: '90%',             // ✅ giới hạn chiều ngang
+    maxHeight: '80%',         // ✅ tránh tràn màn
   },
   header: {
     flexDirection: 'row',
@@ -102,6 +115,17 @@ const styles = StyleSheet.create({
   selectedText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  resetButton: {
+    backgroundColor: '#E5E7EB',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  resetText: {
+    color: '#374151',
+    fontWeight: 'bold',
   },
 });
 

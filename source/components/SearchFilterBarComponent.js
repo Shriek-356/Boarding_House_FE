@@ -18,8 +18,8 @@ const SearchFilterBarComponent = ({ onSearch }) => {
         setLocationVisible(false);
     };
 
-    const handlePriceSelect = (price) => {
-        setSelectedPrice(price);
+    const handlePriceSelect = (minPrice, maxPrice,label) => {
+        setSelectedPrice({ min: minPrice, max: maxPrice,label: label });
         setPriceVisible(false);
     };
 
