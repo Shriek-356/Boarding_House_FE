@@ -4,7 +4,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LocationFilterModal from '../modals/LocationFilterModal'; // Assuming you have a modal for location selection
 import PriceFilterModal from '../modals/PriceFilterModal'; // Assuming you have a modal for price selection
 import AreaFilterModal from '../modals/AreaFilterModal'; // Assuming you have a modal
-const SearchFilterBarComponent = ({ onSearch }) => {
+import { useNavigation } from '@react-navigation/native';
+const SearchFilterBarComponent = () => {
+    const navigation = useNavigation();
     const [locationVisible, setLocationVisible] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [priceVisible, setPriceVisible] = useState(false);
@@ -34,14 +36,11 @@ const SearchFilterBarComponent = ({ onSearch }) => {
 
     // Xử lý tìm kiếm
     const handleSearch = () => {
-        if (onSearch) {
-            onSearch({
-                location: selectedLocation,
-                price: selectedPrice,
-                area: selectedArea,
-                // Có thể thêm các tham số khác (giá, diện tích) ở đây
-            });
-        }
+        navigation.navigate('SearchResult', {
+            location: selectedLocation,
+            price: selectedPrice,
+            area: selectedArea,
+        });
     };
 
     return (

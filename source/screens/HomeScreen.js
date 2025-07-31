@@ -11,10 +11,6 @@ import {
 } from 'react-native';
 import { Button } from 'react-native-paper';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
-import { searchBoardingZones } from '../api/boardingZoneApi';
-import { endpoints } from '../api/boardingZoneApi';
-import { axiosInstance } from '../api/axiosClient';
-import qs from 'qs';
 const mockPosts = [
   {
     id: '1',
@@ -34,31 +30,6 @@ const mockPosts = [
 
 const HomeScreen = () => {
   const [searchText, setSearchText] = useState('');
-
-  const onSearch = async ({ location, price, area }) => {
-    const filters = {};
-
-    if (location?.province?.name) filters.province = location.province.name;
-    if (location?.district?.name) filters.district = location.district.name;
-    if (location?.ward?.name) filters.ward = location.ward.name;
-
-    if (price?.min) filters.minPrice = price.min;
-    if (price?.max) filters.maxPrice = price.max;
-
-    if (area?.value?.min) filters.minArea = area.value.min;
-    if (area?.value?.max) filters.maxArea = area.value.max;
-    filters.page = 0; // page mặc định
-    try {
-
-      const response = await axiosInstance.get(endpoints.searchBoardingZones, {
-        params: filters,
-      });
-      console.log('Kết quả tìm kiếm:', response.data);
-      // setState(data.content) nếu bạn muốn hiển thị danh sách
-    } catch (error) {
-      console.error('Lỗi tìm kiếm:', error);
-    }
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -82,7 +53,7 @@ const HomeScreen = () => {
       </ImageBackground>
 
       {/* Thanh lọc trọ */}
-      <SearchFilterBarComponent onSearch={onSearch} />
+      <SearchFilterBarComponent />
 
       {/* Danh sách trọ */}
       <Text style={styles.sectionTitle}>Danh sách phòng trọ</Text>
