@@ -13,13 +13,17 @@ const SearchFilterBarComponent = ({ onSearch }) => {
     const [selectedArea, setSelectedArea] = useState(null);
 
     // Xử lý khi chọn địa điểm
-    const handleLocationSelect = (province, district) => {
-        setSelectedLocation({ province, district });
+    const handleLocationSelect = (location) => {
+        if (location) {
+            setSelectedLocation(location); // object gồm province, district, ward
+        } else {
+            setSelectedLocation(null); // người dùng chọn "Đặt lại"
+        }
         setLocationVisible(false);
     };
 
-    const handlePriceSelect = (minPrice, maxPrice,label) => {
-        setSelectedPrice({ min: minPrice, max: maxPrice,label: label });
+    const handlePriceSelect = (minPrice, maxPrice, label) => {
+        setSelectedPrice({ min: minPrice, max: maxPrice, label: label });
         setPriceVisible(false);
     };
 
@@ -51,10 +55,13 @@ const SearchFilterBarComponent = ({ onSearch }) => {
                     <Icon name="map-marker-outline" size={20} color="#007AFF" />
                     <View style={styles.filterTextContainer}>
                         <Text style={styles.filterLabel}>
-                            {selectedLocation ?
-                                `${selectedLocation.province}, ${selectedLocation.district}` :
-                                'Địa điểm'}
+                            {selectedLocation && selectedLocation.province
+                                ? `${selectedLocation.province?.name || ''}${selectedLocation.district?.name ? ', ' + selectedLocation.district.name : ''
+                                }${selectedLocation.ward?.name ? ', ' + selectedLocation.ward.name : ''
+                                }`
+                                : 'Địa điểm'}
                         </Text>
+
                         <Icon name="chevron-down" size={20} color="#666" />
                     </View>
                 </TouchableOpacity>
@@ -92,7 +99,6 @@ const SearchFilterBarComponent = ({ onSearch }) => {
             <TouchableOpacity
                 style={styles.searchButton}
                 onPress={handleSearch}
-                disabled={!selectedLocation}
             >
                 <Icon name="magnify" size={24} color="#fff" />
                 <Text style={styles.searchButtonText}>Tìm kiếm</Text>
@@ -103,6 +109,7 @@ const SearchFilterBarComponent = ({ onSearch }) => {
                 visible={locationVisible}
                 onClose={() => setLocationVisible(false)}
                 onSelect={handleLocationSelect}
+                defaultValue={selectedLocation}
             />
             {/* Modal chọn giá */}
             <PriceFilterModal

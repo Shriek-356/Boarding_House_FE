@@ -20,6 +20,7 @@
     "expo-status-bar": "~2.2.3",
     "lottie-ios": "^4.5.1",
     "lottie-react-native": "7.2.2",
+    "qs": "^6.14.0",
     "react": "19.0.0",
     "react-hook-form": "^7.61.1",
     "react-native": "0.79.5",
