@@ -51,7 +51,7 @@ const SearchResultScreen = ({ route }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => navigation.navigate('BoardingZoneDetail', { id: item.id })}
+      onPress={() => navigation.navigate('BoardingZoneDetail', {id: item.id})}
     >
       <Image
         source={{ uri: item.images?.[0] || 'https://i.imgur.com/JZw1g0a.jpg' }}
