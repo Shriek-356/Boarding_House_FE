@@ -31,11 +31,16 @@ const BoardingDetailScreen = () => {
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
-
+    let requestCount = 0;
+    const MAX_REQUESTS_PER_MINUTE = 50;
     //Ham lấy tọa độ từ địa chỉ, dung API cua LocationIQ
     const getCoordinatesFromAddress = async (address) => {
         if (!address) return;
-
+        if (requestCount >= MAX_REQUESTS_PER_MINUTE) {
+            console.warn("Đạt giới hạn request");
+            return null;
+        }
+        requestCount++;
         await new Promise(resolve => setTimeout(resolve, 500));
 
         try {
@@ -52,7 +57,7 @@ const BoardingDetailScreen = () => {
                 }));
             }
         } catch (error) {
-            console.error("LocationIQ Error:", error.response?.data || error.message);
+            console.log("LocationIQ Error:", error.response?.data || error.message);
         }
     };
 
