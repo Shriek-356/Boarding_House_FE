@@ -19,6 +19,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import MapView, { Marker } from 'react-native-maps';
 import { ActivityIndicator } from 'react-native-paper';
 import { getBoardingZoneById } from '../api/boardingZoneApi';
+import axios from 'axios';
+import { set } from 'react-hook-form';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +31,30 @@ const BoardingDetailScreen = () => {
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    //Ham lấy tọa độ từ địa chỉ, dung API cua LocationIQ
+    const getCoordinatesFromAddress = async (address) => {
+        if (!address) return;
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        try {
+            const response = await axios.get(
+                `https://us1.locationiq.com/v1/search.php?key=pk.813257b3e503fd44f49d3c6b13648a38&q=${encodeURIComponent(address)}&format=json`
+            );
+
+            if (response.data?.length > 0) {
+                const firstResult = response.data[0];
+                setRoom(prev => ({
+                    ...prev,
+                    latitude: parseFloat(firstResult.lat),
+                    longitude: parseFloat(firstResult.lon)
+                }));
+            }
+        } catch (error) {
+            console.error("LocationIQ Error:", error.response?.data || error.message);
+        }
+    };
 
     useEffect(() => {
         const fetchRoomDetails = async () => {
@@ -45,6 +71,10 @@ const BoardingDetailScreen = () => {
 
         fetchRoomDetails();
     }, [id]);
+
+    useEffect(() => {
+        getCoordinatesFromAddress([room?.address, room?.street, room?.ward, room?.district, room?.province].filter(Boolean).join(', ') || '')
+    }, [room])
 
     const handleCallOwner = () => {
         const phone = room?.contactPhone || room?.landlord?.phone || '0000000000';
@@ -72,7 +102,11 @@ const BoardingDetailScreen = () => {
         );
     }
 
+
     const images = room.images || ['https://i.imgur.com/JZw1g0a.jpg'];
+
+    // Test ngay trong component
+
 
     return (
         <SafeAreaView style={styles.safeArea}>
