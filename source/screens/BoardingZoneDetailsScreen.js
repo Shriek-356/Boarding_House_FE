@@ -66,7 +66,6 @@ const BoardingDetailScreen = () => {
         const fetchBoardingZoneDetails = async () => {
             try {
                 const response = await getBoardingZoneById(id);
-                console.log('Room details:', response);
                 setRoom(response);
             } catch (error) {
                 console.error('Error fetching room details:', error);
@@ -110,15 +109,15 @@ const BoardingDetailScreen = () => {
                 console.error('Error fetching room environment:', error);
             }
         };
-
+        fetchBoardingZoneDetails();
         fetchBoardingZoneAmenities();
         fetchBoardingZoneTarget();
         fetchBoardingZoneEnvironment();
-        fetchBoardingZoneDetails();
     }, [id]);
 
     useEffect(() => {
         getCoordinatesFromAddress([room?.address, room?.street, room?.ward, room?.district, room?.province].filter(Boolean).join(', ') || '')
+        //console.log("Room details updated:", room);
     }, [room])
 
     const handleCallOwner = () => {
@@ -204,7 +203,7 @@ const BoardingDetailScreen = () => {
                     <Text style={styles.title}>{room.name || 'Phòng trọ không tên'}</Text>
 
                     <View style={styles.priceContainer}>
-                        <Text style={styles.price}>{room.expectedPrice?.toLocaleString('vi-VN') || '---'}đ/tháng</Text>
+                        <Text style={styles.price}>Từ {room.expectedPrice?.toLocaleString('vi-VN') || '---'}đ/tháng</Text>
                         {room.deposit && <Text style={styles.deposit}>Đặt cọc: {room.deposit.toLocaleString('vi-VN')}đ</Text>}
                     </View>
 
@@ -227,14 +226,46 @@ const BoardingDetailScreen = () => {
 
                     <View style={styles.divider} />
 
-                    {room.utilities?.length > 0 && (
+                    {/* ĐỐI TƯỢNG  */}
+
+                    {room.target?.length > 0 && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Đối tượng</Text>
+                            <View style={styles.flexWrapRow}>
+                                {room.target.map((target, index) => (
+                                    <View key={index} style={styles.tagItem}>
+                                        <Icon name="account" size={18} color="#6C5CE7" />
+                                        <Text style={styles.tagText}>{target.targetGroup}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                            <View style={styles.divider} />
+                        </View>
+                    )}
+
+                    {room.amenities?.length > 0 && (
                         <View>
                             <Text style={styles.sectionTitle}>Tiện ích</Text>
                             <View style={styles.utilitiesContainer}>
-                                {room.utilities.map((utility, index) => (
+                                {room.amenities.map((amenities, index) => (
                                     <View key={index} style={styles.utilityItem}>
-                                        <Icon name={utility.icon} size={20} color="#6C5CE7" />
-                                        <Text style={styles.utilityText}>{utility.name}</Text>
+                                        <Icon name={amenities.icon} size={20} color="#6C5CE7" />
+                                        <Text style={styles.utilityText}>{amenities.amenityName}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                            <View style={styles.divider} />
+                        </View>
+                    )}
+
+                    {room.environment?.length > 0 && (
+                        <View>
+                            <Text style={styles.sectionTitle}>Môi trường xung quanh</Text>
+                            <View style={styles.flexWrapRow}>
+                                {room.environment.map((env, index) => (
+                                    <View key={index} style={styles.tagItem}>
+                                        <Icon name="home-city" size={18} color="#6C5CE7" />
+                                        <Text style={styles.tagText}>{env.environmentType}</Text>
                                     </View>
                                 ))}
                             </View>
@@ -542,6 +573,26 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 10,
+    },
+    tagItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        marginRight: 10,
+        marginBottom: 10,
+        backgroundColor: '#f9f9f9',
+    },
+    tagText: {
+        marginLeft: 6,
+        fontSize: 14,
+        color: '#333',
+    },
+    flexWrapRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
     },
 });
 
