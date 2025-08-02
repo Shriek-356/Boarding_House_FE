@@ -18,9 +18,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MapView, { Marker } from 'react-native-maps';
 import { ActivityIndicator } from 'react-native-paper';
-import { getBoardingZoneById } from '../api/boardingZoneApi';
+import { getBoardingZoneById, getBoardingZoneAmenities, getBoardingZoneTarget, getBoardingZoneEnvironment } from '../api/boardingZoneApi';
 import axios from 'axios';
-import { set } from 'react-hook-form';
 
 const { width } = Dimensions.get('window');
 
@@ -61,8 +60,10 @@ const BoardingDetailScreen = () => {
         }
     };
 
+
+
     useEffect(() => {
-        const fetchRoomDetails = async () => {
+        const fetchBoardingZoneDetails = async () => {
             try {
                 const response = await getBoardingZoneById(id);
                 console.log('Room details:', response);
@@ -74,7 +75,46 @@ const BoardingDetailScreen = () => {
             }
         };
 
-        fetchRoomDetails();
+        const fetchBoardingZoneAmenities = async () => {
+            try {
+                const amenities = await getBoardingZoneAmenities(id);
+                setRoom(prev => ({
+                    ...prev,
+                    amenities
+                }));
+            } catch (error) {
+                console.error('Error fetching room amenities:', error);
+            }
+        };
+
+        const fetchBoardingZoneTarget = async () => {
+            try {
+                const target = await getBoardingZoneTarget(id);
+                setRoom(prev => ({
+                    ...prev,
+                    target
+                }));
+            } catch (error) {
+                console.error('Error fetching room target:', error);
+            }
+        };
+
+        const fetchBoardingZoneEnvironment = async () => {
+            try {
+                const environment = await getBoardingZoneEnvironment(id);
+                setRoom(prev => ({
+                    ...prev,
+                    environment
+                }));
+            } catch (error) {
+                console.error('Error fetching room environment:', error);
+            }
+        };
+
+        fetchBoardingZoneAmenities();
+        fetchBoardingZoneTarget();
+        fetchBoardingZoneEnvironment();
+        fetchBoardingZoneDetails();
     }, [id]);
 
     useEffect(() => {
