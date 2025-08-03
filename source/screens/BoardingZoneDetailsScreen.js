@@ -1,4 +1,4 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -18,31 +18,89 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MapView, { Marker } from 'react-native-maps';
 import { ActivityIndicator } from 'react-native-paper';
-import { getBoardingZoneById, getBoardingZoneAmenities, getBoardingZoneTarget, getBoardingZoneEnvironment } from '../api/boardingZoneApi';
+import {
+    getBoardingZoneById,
+    getBoardingZoneAmenities,
+    getBoardingZoneTarget,
+    getBoardingZoneEnvironment
+} from '../api/boardingZoneApi';
+import { getRoomsOfBoardingZone } from '../api/roomApi';
+import PropTypes from 'prop-types';
 import axios from 'axios';
+import { Modal } from 'react-native';
+import { RoomDetailModal } from '../modals/RoomDetailsModal';
 
 const { width } = Dimensions.get('window');
+const MAX_REQUESTS_PER_MINUTE = 50;
 
 const BoardingDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { id } = route.params;
+
     const [room, setRoom] = useState(null);
+    const [boardingHouse, setBoardingHouse] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
-    let requestCount = 0;
-    const MAX_REQUESTS_PER_MINUTE = 50;
-    //Ham lấy tọa độ từ địa chỉ, dung API cua LocationIQ
-    const getCoordinatesFromAddress = async (address) => {
-        if (!address) return;
-        if (requestCount >= MAX_REQUESTS_PER_MINUTE) {
-            console.warn("Đạt giới hạn request");
-            return null;
+    const [requestCount, setRequestCount] = useState(0);
+    const [error, setError] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
+
+    // Memoized address for coordinates fetching
+    const fullAddress = useMemo(() => {
+        if (!room) return '';
+        return [room.address, room.street, room.ward, room.district, room.province]
+            .filter(Boolean)
+            .join(', ');
+    }, [room]);
+
+    // Hàm mở modal
+    const handleRoomPress = (room) => {
+        setSelectedRoom(room);
+        setModalVisible(true);
+    };
+
+    // Fetch all boarding zone data in parallel
+    const fetchBoardingZoneData = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const [details, amenities, target, environment, rooms] = await Promise.all([
+                getBoardingZoneById(id),
+                getBoardingZoneAmenities(id),
+                getBoardingZoneTarget(id),
+                getBoardingZoneEnvironment(id),
+                getRoomsOfBoardingZone(id)
+            ]);
+
+            setRoom({
+                ...details,
+                amenities,
+                target,
+                environment
+            });
+
+            setBoardingHouse(rooms);
+        } catch (err) {
+            console.error('Error fetching boarding zone data:', err);
+            setError('Không thể tải thông tin phòng trọ. Vui lòng thử lại sau.');
+        } finally {
+            setLoading(false);
         }
-        requestCount++;
-        await new Promise(resolve => setTimeout(resolve, 500));
+    }, [id]);
+
+    // Get coordinates from address with rate limiting
+    const getCoordinatesFromAddress = useCallback(async (address) => {
+        if (!address || requestCount >= MAX_REQUESTS_PER_MINUTE) {
+            console.warn("Đạt giới hạn request hoặc địa chỉ trống");
+            return;
+        }
 
         try {
+            setRequestCount(prev => prev + 1);
+
             const response = await axios.get(
                 `https://us1.locationiq.com/v1/search.php?key=pk.813257b3e503fd44f49d3c6b13648a38&q=${encodeURIComponent(address)}&format=json`
             );
@@ -55,89 +113,82 @@ const BoardingDetailScreen = () => {
                     longitude: parseFloat(firstResult.lon)
                 }));
             }
-        } catch (error) {
-            console.log("LocationIQ Error:", error.response?.data || error.message);
+        } catch (err) {
+            console.log("LocationIQ Error:", err.response?.data || err.message);
         }
-    };
-
-
+    }, [requestCount]);
 
     useEffect(() => {
-        const fetchBoardingZoneDetails = async () => {
-            try {
-                const response = await getBoardingZoneById(id);
-                setRoom(response);
-            } catch (error) {
-                console.error('Error fetching room details:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const fetchBoardingZoneAmenities = async () => {
-            try {
-                const amenities = await getBoardingZoneAmenities(id);
-                setRoom(prev => ({
-                    ...prev,
-                    amenities
-                }));
-            } catch (error) {
-                console.error('Error fetching room amenities:', error);
-            }
-        };
-
-        const fetchBoardingZoneTarget = async () => {
-            try {
-                const target = await getBoardingZoneTarget(id);
-                setRoom(prev => ({
-                    ...prev,
-                    target
-                }));
-            } catch (error) {
-                console.error('Error fetching room target:', error);
-            }
-        };
-
-        const fetchBoardingZoneEnvironment = async () => {
-            try {
-                const environment = await getBoardingZoneEnvironment(id);
-                setRoom(prev => ({
-                    ...prev,
-                    environment
-                }));
-            } catch (error) {
-                console.error('Error fetching room environment:', error);
-            }
-        };
-        fetchBoardingZoneDetails();
-        fetchBoardingZoneAmenities();
-        fetchBoardingZoneTarget();
-        fetchBoardingZoneEnvironment();
-    }, [id]);
+        fetchBoardingZoneData();
+    }, [fetchBoardingZoneData]);
 
     useEffect(() => {
-        getCoordinatesFromAddress([room?.address, room?.street, room?.ward, room?.district, room?.province].filter(Boolean).join(', ') || '')
-        //console.log("Room details updated:", room);
-    }, [room])
+        if (fullAddress) {
+            getCoordinatesFromAddress(fullAddress);
+        }
+    }, [fullAddress, getCoordinatesFromAddress]);
 
-    const handleCallOwner = () => {
-        const phone = room?.contactPhone || room?.landlord?.phone || '0000000000';
-        Linking.openURL(`tel:${phone}`);
-    };
+    const handleCallOwner = useCallback(() => {
+        const phone = room?.contactPhone || room?.landlord?.phone;
+        if (phone) {
+            Linking.openURL(`tel:${phone}`);
+        }
+    }, [room]);
 
-    const handleShareRoom = async () => {
+    const handleShareRoom = useCallback(async () => {
         try {
             await Share.share({
                 message: `Xem phòng trọ này: ${room?.name || 'Phòng trọ'} - Giá ${room?.expectedPrice?.toLocaleString('vi-VN') || '---'}đ/tháng`,
                 url: 'https://yourwebsite.com/room/' + id,
                 title: room?.name || 'Phòng trọ'
             });
-        } catch (error) {
-            console.error('Error sharing:', error);
+        } catch (err) {
+            console.error('Error sharing:', err);
         }
-    };
+    }, [room, id]);
 
-    if (loading || !room) {
+    const handleImageError = useCallback(({ nativeEvent: { error } }) => {
+        console.log('Image load error:', error);
+        // You could set a fallback image here
+    }, []);
+
+    const renderImageItem = useCallback(({ item, index }) => (
+        <TouchableOpacity onPress={() => setActiveImageIndex(index)}>
+            <Image
+                source={{ uri: item }}
+                style={[styles.thumbnail, index === activeImageIndex && styles.activeThumbnail]}
+                onError={handleImageError}
+            />
+        </TouchableOpacity>
+    ), [activeImageIndex, handleImageError]);
+
+    const renderUtilityItem = useCallback(({ item }) => (
+        <View style={styles.utilityItem}>
+            <Icon name={item.icon} size={20} color="#6C5CE7" />
+            <Text style={styles.utilityText}>{item.amenityName}</Text>
+        </View>
+    ), []);
+
+    const renderRoomItem = useCallback(({ item }) => (
+        <View style={styles.card}>
+            <Image
+                source={{ uri: item.images[0] || 'https://i.imgur.com/JZw1g0a.jpg' }}
+                style={styles.image}
+                onError={handleImageError}
+            />
+            <View style={styles.infoContainer}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.info}>Diện tích: {item.area}m²</Text>
+                <Text style={styles.info}>Tối đa: {item.maxPeople} người</Text>
+                <Text style={styles.price}>{(item.price / 1000000).toFixed(1)} triệu/tháng</Text>
+                <TouchableOpacity style={styles.button} onPress={() => handleRoomPress(item)}>
+                    <Text style={styles.buttonText}>Chi tiết</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    ), [handleImageError]);
+
+    if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#6C5CE7" />
@@ -146,11 +197,26 @@ const BoardingDetailScreen = () => {
         );
     }
 
+    if (error) {
+        return (
+            <View style={styles.errorContainer}>
+                <Icon name="alert-circle" size={48} color="#FF7675" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={fetchBoardingZoneData}
+                >
+                    <Text style={styles.retryButtonText}>Thử lại</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
-    const images = room.images || ['https://i.imgur.com/JZw1g0a.jpg'];
+    if (!room) {
+        return null;
+    }
 
-    // Test ngay trong component
-
+    const images = room.images?.length > 0 ? room.images : ['https://i.imgur.com/JZw1g0a.jpg'];
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -172,12 +238,16 @@ const BoardingDetailScreen = () => {
                         source={{ uri: images[activeImageIndex] }}
                         style={styles.mainImage}
                         resizeMode="cover"
+                        onError={handleImageError}
                     />
                     <View style={styles.imagePagination}>
                         {images.map((_, index) => (
                             <View
                                 key={index}
-                                style={[styles.paginationDot, index === activeImageIndex && styles.activeDot]}
+                                style={[
+                                    styles.paginationDot,
+                                    index === activeImageIndex && styles.activeDot
+                                ]}
                             />
                         ))}
                     </View>
@@ -186,15 +256,8 @@ const BoardingDetailScreen = () => {
                 <FlatList
                     horizontal
                     data={images}
-                    renderItem={({ item, index }) => (
-                        <TouchableOpacity onPress={() => setActiveImageIndex(index)}>
-                            <Image
-                                source={{ uri: item }}
-                                style={[styles.thumbnail, index === activeImageIndex && styles.activeThumbnail]}
-                            />
-                        </TouchableOpacity>
-                    )}
-                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={renderImageItem}
+                    keyExtractor={(_, index) => index.toString()}
                     contentContainerStyle={styles.thumbnailContainer}
                     showsHorizontalScrollIndicator={false}
                 />
@@ -203,15 +266,19 @@ const BoardingDetailScreen = () => {
                     <Text style={styles.title}>{room.name || 'Phòng trọ không tên'}</Text>
 
                     <View style={styles.priceContainer}>
-                        <Text style={styles.price}>Từ {room.expectedPrice?.toLocaleString('vi-VN') || '---'}đ/tháng</Text>
-                        {room.deposit && <Text style={styles.deposit}>Đặt cọc: {room.deposit.toLocaleString('vi-VN')}đ</Text>}
+                        <Text style={styles.price}>
+                            Từ {room.expectedPrice?.toLocaleString('vi-VN') || '---'}đ/tháng
+                        </Text>
+                        {room.deposit && (
+                            <Text style={styles.deposit}>
+                                Đặt cọc: {room.deposit.toLocaleString('vi-VN')}đ
+                            </Text>
+                        )}
                     </View>
 
                     <View style={styles.infoRow}>
                         <Icon name="map-marker" size={18} color="#6C5CE7" />
-                        <Text style={styles.address}>
-                            {[room.address, room.street, room.ward, room.district, room.province].filter(Boolean).join(', ') || 'Địa chỉ không xác định'}
-                        </Text>
+                        <Text style={styles.address}>{fullAddress || 'Địa chỉ không xác định'}</Text>
                     </View>
 
                     <View style={styles.infoRow}>
@@ -222,14 +289,14 @@ const BoardingDetailScreen = () => {
                     <View style={styles.divider} />
 
                     <Text style={styles.sectionTitle}>Mô tả chi tiết</Text>
-                    <Text style={styles.description}>{room.description || 'Không có mô tả chi tiết.'}</Text>
+                    <Text style={styles.description}>
+                        {room.description || 'Không có mô tả chi tiết.'}
+                    </Text>
 
                     <View style={styles.divider} />
 
-                    {/* ĐỐI TƯỢNG  */}
-
                     {room.target?.length > 0 && (
-                        <View>
+                        <>
                             <Text style={styles.sectionTitle}>Đối tượng</Text>
                             <View style={styles.flexWrapRow}>
                                 {room.target.map((target, index) => (
@@ -240,26 +307,27 @@ const BoardingDetailScreen = () => {
                                 ))}
                             </View>
                             <View style={styles.divider} />
-                        </View>
+                        </>
                     )}
 
                     {room.amenities?.length > 0 && (
-                        <View>
+                        <>
                             <Text style={styles.sectionTitle}>Tiện ích</Text>
-                            <View style={styles.utilitiesContainer}>
-                                {room.amenities.map((amenities, index) => (
-                                    <View key={index} style={styles.utilityItem}>
-                                        <Icon name={amenities.icon} size={20} color="#6C5CE7" />
-                                        <Text style={styles.utilityText}>{amenities.amenityName}</Text>
-                                    </View>
-                                ))}
-                            </View>
+                            <FlatList
+                                data={room.amenities}
+                                renderItem={renderUtilityItem}
+                                keyExtractor={(item, index) => index.toString()}
+                                numColumns={2}
+                                columnWrapperStyle={styles.utilityColumnWrapper}
+                                contentContainerStyle={styles.utilitiesContainer}
+                                scrollEnabled={false}
+                            />
                             <View style={styles.divider} />
-                        </View>
+                        </>
                     )}
 
                     {room.environment?.length > 0 && (
-                        <View>
+                        <>
                             <Text style={styles.sectionTitle}>Môi trường xung quanh</Text>
                             <View style={styles.flexWrapRow}>
                                 {room.environment.map((env, index) => (
@@ -270,7 +338,20 @@ const BoardingDetailScreen = () => {
                                 ))}
                             </View>
                             <View style={styles.divider} />
-                        </View>
+                        </>
+                    )}
+
+                    {boardingHouse.length > 0 && (
+                        <>
+                            <Text style={styles.sectionTitle}>Phòng trọ khác trong khu</Text>
+                            <FlatList
+                                data={boardingHouse}
+                                renderItem={renderRoomItem}
+                                keyExtractor={(item) => item.id.toString()}
+                                scrollEnabled={false}
+                            />
+                            <View style={styles.divider} />
+                        </>
                     )}
 
                     <Text style={styles.sectionTitle}>Thông tin chủ trọ</Text>
@@ -278,12 +359,22 @@ const BoardingDetailScreen = () => {
                         <Image
                             source={{ uri: room.landlord?.avatar || 'https://i.imgur.com/JZw1g0a.jpg' }}
                             style={styles.ownerAvatar}
+                            onError={handleImageError}
                         />
                         <View style={styles.ownerInfo}>
-                            <Text style={styles.ownerName}>{room.contactName || `${room.landlord?.firstname || 'Chủ'} ${room.landlord?.lastname || ''}`}</Text>
-                            <Text style={styles.ownerPhone}>{room.contactPhone || room.landlord?.phone || 'Không có số điện thoại'}</Text>
+                            <Text style={styles.ownerName}>
+                                {room.contactName ||
+                                    `${room.landlord?.firstname || 'Chủ'} ${room.landlord?.lastname || ''}`}
+                            </Text>
+                            <Text style={styles.ownerPhone}>
+                                {room.contactPhone || room.landlord?.phone || 'Không có số điện thoại'}
+                            </Text>
                         </View>
-                        <TouchableOpacity style={styles.callButton} onPress={handleCallOwner}>
+                        <TouchableOpacity
+                            style={styles.callButton}
+                            onPress={handleCallOwner}
+                            disabled={!room.contactPhone && !room.landlord?.phone}
+                        >
                             <Icon name="phone" size={20} color="#FFF" />
                             <Text style={styles.callButtonText}>Gọi ngay</Text>
                         </TouchableOpacity>
@@ -292,7 +383,7 @@ const BoardingDetailScreen = () => {
                     <View style={styles.divider} />
 
                     {room.latitude && room.longitude && (
-                        <View>
+                        <>
                             <Text style={styles.sectionTitle}>Vị trí</Text>
                             <View style={styles.mapContainer}>
                                 <MapView
@@ -305,26 +396,49 @@ const BoardingDetailScreen = () => {
                                     }}
                                     scrollEnabled={false}
                                 >
-                                    <Marker coordinate={{ latitude: room.latitude, longitude: room.longitude }}>
+                                    <Marker coordinate={{
+                                        latitude: room.latitude,
+                                        longitude: room.longitude
+                                    }}>
                                         <View style={styles.marker}>
                                             <Icon name="home" size={24} color="#6C5CE7" />
                                         </View>
                                     </Marker>
                                 </MapView>
                             </View>
-                        </View>
+                        </>
                     )}
                 </View>
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.contactButton} onPress={handleCallOwner}>
+                <TouchableOpacity
+                    style={styles.contactButton}
+                    onPress={handleCallOwner}
+                    disabled={!room.contactPhone && !room.landlord?.phone}
+                >
                     <Icon name="phone" size={20} color="#FFF" />
                     <Text style={styles.contactButtonText}>Liên hệ chủ trọ</Text>
                 </TouchableOpacity>
             </View>
+
+            <RoomDetailModal
+                visible={modalVisible}
+                room={selectedRoom}
+                onClose={() => setModalVisible(false)}
+                handleCallOwner={handleCallOwner}
+            />
         </SafeAreaView>
     );
+};
+
+BoardingDetailScreen.propTypes = {
+    route: PropTypes.shape({
+        params: PropTypes.shape({
+            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired
+        }).isRequired
+    }).isRequired,
+    navigation: PropTypes.object.isRequired
 };
 
 const styles = StyleSheet.create({
@@ -337,6 +451,30 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#FFF',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#FFF',
+    },
+    errorText: {
+        marginTop: 15,
+        fontSize: 16,
+        color: '#2D3436',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    retryButton: {
+        backgroundColor: '#6C5CE7',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 5,
+    },
+    retryButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
     },
     loadingText: {
         marginTop: 15,
@@ -472,9 +610,11 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
     utilitiesContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 10,
+        paddingBottom: 10,
+    },
+    utilityColumnWrapper: {
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
     utilityItem: {
         flexDirection: 'row',
@@ -483,13 +623,14 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        marginRight: 10,
+        width: '48%',
         marginBottom: 10,
     },
     utilityText: {
         fontSize: 13,
         color: '#2D3436',
         marginLeft: 5,
+        flexShrink: 1,
     },
     ownerContainer: {
         flexDirection: 'row',
@@ -522,6 +663,10 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         paddingVertical: 10,
         paddingHorizontal: 15,
+        opacity: 1,
+    },
+    callButtonDisabled: {
+        opacity: 0.5,
     },
     callButtonText: {
         color: '#FFF',
@@ -530,10 +675,11 @@ const styles = StyleSheet.create({
         marginLeft: 5,
     },
     mapContainer: {
-        height: 200,
+        height: 250,  // Tăng từ 200 lên 250 hoặc cao hơn nếu cần
         borderRadius: 12,
         overflow: 'hidden',
         marginTop: 10,
+        marginBottom: 10,  // Thêm margin bottom để tránh bị che
     },
     map: {
         ...StyleSheet.absoluteFillObject,
@@ -567,6 +713,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#6C5CE7',
         borderRadius: 25,
         padding: 15,
+        opacity: 1,
+    },
+    contactButtonDisabled: {
+        opacity: 0.5,
     },
     contactButtonText: {
         color: '#FFF',
@@ -594,6 +744,36 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
     },
+    card: {
+        flexDirection: 'row',
+        margin: 10,
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        overflow: 'hidden',
+        elevation: 2
+    },
+    image: {
+        width: 120,
+        height: 120
+    },
+    infoContainer: {
+        flex: 1,
+        padding: 10
+    },
+    info: {
+        fontSize: 13,
+        marginTop: 2
+    },
+    button: {
+        marginTop: 10,
+        backgroundColor: '#6C5CE7',
+        padding: 8,
+        borderRadius: 5
+    },
+    buttonText: {
+        color: '#fff',
+        textAlign: 'center'
+    }
 });
 
 export default BoardingDetailScreen;
