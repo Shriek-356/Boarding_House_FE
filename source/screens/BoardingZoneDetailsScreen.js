@@ -27,8 +27,7 @@ import {
 import { getRoomsOfBoardingZone } from '../api/roomApi';
 import PropTypes from 'prop-types';
 import axios from 'axios';
-import { Modal } from 'react-native';
-import { RoomDetailModal } from '../modals/RoomDetailsModal';
+import RoomDetailsModal from '../modals/RoomDetailsModal';
 
 const { width } = Dimensions.get('window');
 const MAX_REQUESTS_PER_MINUTE = 50;
@@ -422,7 +421,7 @@ const BoardingDetailScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            <RoomDetailModal
+            <RoomDetailsModal
                 visible={modalVisible}
                 room={selectedRoom}
                 onClose={() => setModalVisible(false)}
