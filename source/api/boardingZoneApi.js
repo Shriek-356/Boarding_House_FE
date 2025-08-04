@@ -6,6 +6,7 @@ export const endpoints = {
     getBoardingZoneAmenities: (id) => `/get-boarding-zone-amenity/${id}`,
     getBoardingZoneEnvironment: (id) => `/get-boarding-zone-environment/${id}`,
     getBoardingZoneTarget: (id) => `/get-boarding-zone-target/${id}`,
+    getAllBoardingZonesByLandlord: "/get-all-boarding-zone",
 }
 
 export const searchBoardingZones = async (filters) => {
@@ -54,6 +55,16 @@ export const getBoardingZoneTarget = async (id) => {
         return response.data;
     } catch (error) {
         console.error("Error fetching boarding zone target:", error);
+        throw error;
+    }
+}
+
+export const getAllBoardingZonesByLandlord = async (landLordId,page) => {
+    try {
+        const response = await axiosInstance.get(endpoints.getAllBoardingZonesByLandlord, { params: { landLordId, page } });     
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching boarding zones by landlord:", error);
         throw error;
     }
 }

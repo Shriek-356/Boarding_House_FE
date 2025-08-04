@@ -355,11 +355,13 @@ const BoardingDetailScreen = () => {
 
                     <Text style={styles.sectionTitle}>Thông tin chủ trọ</Text>
                     <View style={styles.ownerContainer}>
-                        <Image
-                            source={{ uri: room.landlord?.avatar || 'https://i.imgur.com/JZw1g0a.jpg' }}
-                            style={styles.ownerAvatar}
-                            onError={handleImageError}
-                        />
+                        <TouchableOpacity onPress={() => navigation.navigate('Profile', { user: room.landlord })}>
+                            <Image
+                                source={{ uri: room.landlord?.avatar || 'https://i.imgur.com/JZw1g0a.jpg' }}
+                                style={styles.ownerAvatar}
+                                onError={handleImageError}
+                            />
+                        </TouchableOpacity>
                         <View style={styles.ownerInfo}>
                             <Text style={styles.ownerName}>
                                 {room.contactName ||
