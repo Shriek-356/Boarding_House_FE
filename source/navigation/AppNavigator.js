@@ -9,21 +9,26 @@ import SearchResultScreen from '../screens/SearchResultScreen';
 import BoardingDetailScreen from '../screens/BoardingZoneDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
+import { AuthProvider } from '../contexts/AuthContext';
+import ChatScreen from '../screens/ChatScreen';
 
 export default function AppNavigator() {
   return (
     <>
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="MainTab" component={MainTabNavigator} />
-        <Stack.Screen name="SearchResult" component={SearchResultScreen} />
-        <Stack.Screen name="BoardingZoneDetail" component={BoardingDetailScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
-    <Toast config={toastConfig} />
+      <AuthProvider>
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="MainTab" component={MainTabNavigator} />
+            <Stack.Screen name="SearchResult" component={SearchResultScreen} />
+            <Stack.Screen name="BoardingZoneDetail" component={BoardingDetailScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AuthProvider>
+      <Toast config={toastConfig} />
     </>
   );
 }

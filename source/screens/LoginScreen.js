@@ -2,18 +2,20 @@ import { View, StyleSheet, Image, TouchableOpacity, KeyboardAvoidingView, Platfo
 import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useState } from 'react';
+import { use, useState } from 'react';
 import * as yup from 'yup';
 import { loginApi } from '../api/authApi';
 import LottieView from 'lottie-react-native';//Lottie animation
 import Toast from 'react-native-toast-message';
+import { AuthContext } from '../contexts/AuthContext';
+import { useContext } from 'react';
+import { getUserProfile } from '../api/userApi';
 
 // Schema validate
 const schema = yup.object().shape({
     username: yup.string().required('Vui lòng nhập tên đăng nhập'),
     password: yup.string().min(6, 'Mật khẩu ít nhất 6 ký tự').required('Vui lòng nhập mật khẩu'),
 });
-
 
 
 const LoginScreen = ({ navigation }) => {
@@ -27,6 +29,7 @@ const LoginScreen = ({ navigation }) => {
     } = useForm({
         resolver: yupResolver(schema),
     });
+    const { setUser } = useContext(AuthContext);//Lay context user
 
     const onSubmit = async (data) => {
         setIsLoading(true);
@@ -38,6 +41,10 @@ const LoginScreen = ({ navigation }) => {
                 text2: '',
                 position: 'bottom',
             });
+            const userProfile = await getUserProfile(response.token);
+            console.log('User Profile:', userProfile);
+            setUser(userProfile); // Lưu thông tin người dùng vào context
+            // Chuyển hướng đến MainTabNavigator
             navigation.navigate('MainTab');
         } catch (error) {
             // Xử lý lỗi an toàn

@@ -13,10 +13,12 @@ import { useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import { getAllBoardingZonesByLandlord } from '../api/boardingZoneApi';
 import LottieView from 'lottie-react-native';
-
+import { AuthContext } from '../contexts/AuthContext';
+import { useContext } from 'react';
+import { useNavigation } from '@react-navigation/native';
 const UserProfileScreen = () => {
-    const { user } = useRoute().params;
-
+    const { profileUser } = useRoute().params;
+    const navigation = useNavigation();
     //Nhớ bổ sungg check đó có phải là user hiện tại không
     // Nếu không phải thì không hiện nút nhắn tin
     //
@@ -31,12 +33,13 @@ const UserProfileScreen = () => {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(false);
+    const { user } = useContext(AuthContext);// Lấy thông tin người dùng từ context
 
     const fetchUserPosts = useCallback(async () => {
         if (loading || !hasMore) return;
         setLoading(true);
         try {
-            const data = await getAllBoardingZonesByLandlord(user.id, page);
+            const data = await getAllBoardingZonesByLandlord(profileUser.id, page);
             if (Array.isArray(data.content)) {
                 setPosts((prev) => [...prev, ...data.content]);
                 setPage((prev) => prev + 1);
@@ -47,17 +50,18 @@ const UserProfileScreen = () => {
         } finally {
             setLoading(false);
         }
-    }, [loading, hasMore, page, user.id]);
+    }, [loading, hasMore, page, profileUser.id]);
 
     useEffect(() => {
         fetchUserPosts();
     }, []);
 
-    const formattedDate = new Date(user.createdAt).toLocaleDateString('vi-VN');
+    const formattedDate = new Date(profileUser.createdAt).toLocaleDateString('vi-VN');
 
     const handleMessage = () => {
-        // TODO: Điều hướng đến màn hình chat với user.id (landlord)
-        console.log('Nhắn tin với:', user.id);
+        // TODO: Điều hướng đến màn hình chat với profileUser.id (landlord)
+        console.log('Nhắn tin với:', profileUser.id);
+        navigation.navigate('Chat', { senderId: user.id, receiverId: profileUser.id });
         // Ví dụ:
         // navigation.navigate('ChatScreen', { receiverId: user.id, name: user.name });
     };
@@ -66,17 +70,17 @@ const UserProfileScreen = () => {
         <View style={styles.header}>
             <View style={styles.curvedBackground} />
             <Image
-                source={{ uri: user.avatar }}
+                source={{ uri: profileUser.avatar }}
                 style={styles.avatar}
             />
             <TouchableOpacity style={styles.messageButton} onPress={() => handleMessage()}>
                 <Icon name="message-circle" size={18} color="#fff" />
                 <Text style={styles.messageText}>Nhắn tin</Text>
             </TouchableOpacity>
-            <Text style={styles.name}>{user.name}</Text>
+            <Text style={styles.name}>{profileUser.name}</Text>
             <View style={styles.infoRow}>
                 <Icon name="mail" size={16} color="#6B7280" />
-                <Text style={styles.infoText}>{user.email}</Text>
+                <Text style={styles.infoText}>{profileUser.email}</Text>
             </View>
             <View style={styles.infoRow}>
                 <Icon name="calendar" size={16} color="#6B7280" />

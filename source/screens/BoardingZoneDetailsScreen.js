@@ -355,7 +355,7 @@ const BoardingDetailScreen = () => {
 
                     <Text style={styles.sectionTitle}>Thông tin chủ trọ</Text>
                     <View style={styles.ownerContainer}>
-                        <TouchableOpacity onPress={() => navigation.navigate('Profile', { user: room.landlord })}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Profile', { profileUser: room.landlord })}>
                             <Image
                                 source={{ uri: room.landlord?.avatar || 'https://i.imgur.com/JZw1g0a.jpg' }}
                                 style={styles.ownerAvatar}
