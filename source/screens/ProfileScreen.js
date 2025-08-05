@@ -61,7 +61,7 @@ const UserProfileScreen = () => {
     const handleMessage = () => {
         // TODO: Điều hướng đến màn hình chat với profileUser.id (landlord)
         console.log('Nhắn tin với:', profileUser.id);
-        navigation.navigate('Chat', { senderId: user.id, receiverId: profileUser.id });
+        navigation.navigate('Chat', { sender: user, receiver: profileUser });
         // Ví dụ:
         // navigation.navigate('ChatScreen', { receiverId: user.id, name: user.name });
     };
