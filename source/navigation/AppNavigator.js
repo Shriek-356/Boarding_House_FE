@@ -11,11 +11,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
 import { AuthProvider } from '../contexts/AuthContext';
 import ChatScreen from '../screens/ChatScreen';
+import { ChatProvider } from '../contexts/ChatContext';
 
 export default function AppNavigator() {
   return (
     <>
       <AuthProvider>
+        <ChatProvider>
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={SplashScreen} />
@@ -27,6 +29,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Chat" component={ChatScreen} />
           </Stack.Navigator>
         </NavigationContainer>
+        </ChatProvider>
       </AuthProvider>
       <Toast config={toastConfig} />
     </>

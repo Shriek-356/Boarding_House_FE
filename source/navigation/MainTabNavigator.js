@@ -4,9 +4,12 @@ import HomeScreen from '../screens/HomeScreen';
 import AccountScreen from '../screens/AccountScreen';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChatRoomListScreen from '../screens/ChatRoomListScreen';
+import { ChatContext } from '../contexts/ChatContext';
+import { useContext } from 'react';
 const Tab = createBottomTabNavigator();
 
 export default function MainTabNavigator() {
+  const { totalUnread } = useContext(ChatContext); // Lấy tổng số tin nhắn chưa đọc từ context
   return (
     <Tab.Navigator
       screenOptions={{
@@ -43,6 +46,7 @@ export default function MainTabNavigator() {
           tabBarIcon: ({ color, size }) => (
             <Icon name="message-outline" color={color} size={size} />
           ),
+          tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
         }}
       />
     </Tab.Navigator>

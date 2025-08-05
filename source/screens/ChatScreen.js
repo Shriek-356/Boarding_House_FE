@@ -15,6 +15,10 @@ import { db } from '../configs/firebaseConfig';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
+const getChatPath = (id1, id2) => {
+  return `chats/${[id1, id2].sort().join('_')}`; // đảm bảo A_B === B_A
+};
+
 const ChatScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
@@ -24,17 +28,21 @@ const ChatScreen = () => {
   const [input, setInput] = useState('');
   const flatListRef = useRef(null);
 
-  const chatPath = `chats/${sender.id}_${receiver.id}`;
+  const chatPath = getChatPath(sender.id, receiver.id);
 
   useEffect(() => {
     const chatRef = ref(db, chatPath);
-    const unsubscribe = onChildAdded(chatRef, (snapshot) => {
+    const unsubscribe = onChildAdded(chatRef, async (snapshot) => {
       const msg = snapshot.val();
+      const key = snapshot.key;
       setMessages((prev) => [...prev, msg]);
+
+      // Auto scroll to bottom
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 99999, animated: true });
       }, 100);
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -46,9 +54,10 @@ const ChatScreen = () => {
       senderId: sender.id,
       message: input,
       timestamp: now,
+      read: false, // sẽ dùng sau
     });
 
-    // update chatRooms for both users
+    // Update chatRooms cho cả 2 người
     const updates = {};
     updates[`/chatRooms/${sender.id}/${receiver.id}`] = {
       firstname: receiver.firstname,
@@ -100,6 +109,7 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#111827" />
@@ -145,6 +155,7 @@ const ChatScreen = () => {
 };
 
 export default ChatScreen;
+
 
 const styles = StyleSheet.create({
   container: {

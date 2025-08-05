@@ -13,6 +13,7 @@ import { ref, onValue } from 'firebase/database';
 import { db } from '../configs/firebaseConfig';
 import { AuthContext } from '../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 
 const ChatRoomListScreen = () => {
     const { user } = useContext(AuthContext);
