@@ -12,6 +12,7 @@ const Stack = createNativeStackNavigator();
 import { AuthProvider } from '../contexts/AuthContext';
 import ChatScreen from '../screens/ChatScreen';
 import { ChatProvider } from '../contexts/ChatContext';
+import DiscussionPostScreen from '../screens/DiscussionPostScreen';
 
 export default function AppNavigator() {
   return (
@@ -27,6 +28,7 @@ export default function AppNavigator() {
             <Stack.Screen name="BoardingZoneDetail" component={BoardingDetailScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="DiscussionPost" component={DiscussionPostScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>
