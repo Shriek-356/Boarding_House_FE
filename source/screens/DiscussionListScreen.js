@@ -6,7 +6,6 @@ import {
     FlatList,
     TouchableOpacity,
     SafeAreaView,
-    Dimensions,
     Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -48,7 +47,7 @@ const DiscussionListScreen = () => {
     const renderPostCard = ({ item }) => (
         <TouchableOpacity
             style={styles.postCard}
-            onPress={() => navigation.navigate('DiscussionPost', { postId: item.id })}
+            onPress={() => navigation.navigate('DiscussionPost', { post: item })}
         >
             <View style={styles.postContent}>
                 <Text numberOfLines={2} style={styles.postTitle}>{item.title}</Text>
