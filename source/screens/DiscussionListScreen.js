@@ -97,8 +97,11 @@ const DiscussionListScreen = () => {
         </View>
     );
 
+
     return (
         <SafeAreaView style={styles.safeArea}>
+                {renderHeader()}
+                {/* goi ham renderHeader vi no khongg phai la component nen khong the dung <renderHeader /> duoc */}
             <FlatList
                 data={posts}
                 keyExtractor={(item) => item.id}
@@ -118,7 +121,6 @@ const DiscussionListScreen = () => {
                         </View>
                     ) : null
                 }
-                ListHeaderComponent={renderHeader}
                 contentContainerStyle={{
                     paddingBottom: 32,
                     paddingTop: 8,
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
-        marginTop:15
+        marginTop: 15
     },
     backButton: {
         position: 'absolute',
