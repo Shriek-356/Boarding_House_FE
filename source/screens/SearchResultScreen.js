@@ -1,57 +1,68 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  ActivityIndicator, 
-  StyleSheet, 
-  Image, 
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  Image,
   TouchableOpacity,
   Dimensions,
   StatusBar,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { searchBoardingZones } from '../api/boardingZoneApi'; // Assuming you have this API function
+import { searchBoardingZones } from '../api/boardingZoneApi';
+import LottieView from 'lottie-react-native';
+
 const { width } = Dimensions.get('window');
 
 const SearchResultScreen = ({ route }) => {
   const { location, price, area } = route.params;
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
-  useEffect(() => {
-    fetchResults();
-  }, []);
+  const fetchResults = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
 
-  const fetchResults = async () => {
+    const filters = {
+      province: location?.province?.name,
+      district: location?.district?.name,
+      ward: location?.ward?.name,
+      minPrice: price?.min,
+      maxPrice: price?.max,
+      minArea: area?.min,
+      maxArea: area?.max,
+      page: page,
+    };
+
     try {
-      const filters = {
-        province: location?.province?.name,
-        district: location?.district?.name,
-        ward: location?.ward?.name,
-        minPrice: price?.min,
-        maxPrice: price?.max,
-        minArea: area?.min,
-        maxArea: area?.max,
-        page: 0,
-      };
-      
       const data = await searchBoardingZones(filters);
-      setResults(data.content || []);
+      if (Array.isArray(data.content)) {
+        setResults((prev) => [...prev, ...data.content]);
+        setPage((prev) => prev + 1);
+        setHasMore(!data.last);
+      }
     } catch (error) {
       console.error('Lỗi khi tìm kiếm:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, hasMore, page, location, price, area]);
+
+  useEffect(() => {
+    fetchResults(); // gọi page 0 khi mở lần đầu
+  }, []);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('BoardingZoneDetail', {id: item.id})}
+      onPress={() => navigation.navigate('BoardingZoneDetail', { id: item.id })}
     >
       <Image
         source={{ uri: item.images?.[0] || 'https://i.imgur.com/JZw1g0a.jpg' }}
@@ -78,7 +89,7 @@ const SearchResultScreen = ({ route }) => {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (loading && results.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6C5CE7" />
@@ -87,14 +98,11 @@ const SearchResultScreen = ({ route }) => {
     );
   }
 
-  if (results.length === 0) {
+  if (!loading && results.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={24} color="#0066FF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Danh sách phòng phù hợp</Text>
@@ -113,25 +121,38 @@ const SearchResultScreen = ({ route }) => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#0066FF" barStyle="light-content" />
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Danh sách phòng phù hợp</Text>
         <View style={styles.emptyRight} />
       </View>
-      
+
       <FlatList
         data={results}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <Text style={styles.resultCount}>{results.length} kết quả tìm kiếm</Text>
+        ListHeaderComponent={<Text style={styles.resultCount}>{results.length} kết quả tìm kiếm</Text>}
+        onEndReached={fetchResults}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loading && hasMore ? (
+            <View style={styles.loadingMoreContainer}>
+              <LottieView
+                source={require('../../assets/animations/loading.json')}
+                autoPlay
+                loop
+                style={{ width: 90, height: 90 }}
+              />
+              <Text style={styles.loadingText}>Đang tải thêm...</Text>
+            </View>
+          ) : null
         }
+        contentContainerStyle={{
+          paddingBottom: 32,
+          minHeight: '100%',
+        }}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -258,6 +279,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#636E72',
     marginLeft: 5,
+  }, loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#6B7280',
   },
 });
 
