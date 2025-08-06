@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { AuthContext } from '../contexts/AuthContext';
 import { useContext } from 'react';
 import { getUserProfile } from '../api/userApi';
+import { saveToken } from '../api/axiosClient';
 
 // Schema validate
 const schema = yup.object().shape({
@@ -44,6 +45,7 @@ const LoginScreen = ({ navigation }) => {
             const userProfile = await getUserProfile(response.token);
             console.log('User Profile:', userProfile);
             setUser(userProfile); // Lưu thông tin người dùng vào context
+            saveToken(response.token);//Luu token vao AsyncStorage
             // Chuyển hướng đến MainTabNavigator
             navigation.navigate('MainTab');
         } catch (error) {

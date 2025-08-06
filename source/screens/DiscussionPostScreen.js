@@ -9,16 +9,20 @@ import {
 import moment from 'moment';
 import CommentItemComponent from '../components/CommentItemComponent';
 import { getPostComments } from '../api/postCommentApi';
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
+import { addPostComment } from '../api/postCommentApi';
+import { getToken } from '../api/axiosClient';
+
 const DiscussionPostScreen = () => {
   const route = useRoute();
   const { post } = route.params;
   const { user } = useContext(AuthContext);
   const [comments, setComments] = useState(null);
   const [newCommentText, setNewCommentText] = useState('');
+  const [token,setToken] = useState(null);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -26,9 +30,16 @@ const DiscussionPostScreen = () => {
       console.log(comments);
       setComments(comments);
     };
+
+    const loadToken = async () => {
+      const token = await getToken();
+      setToken(token);
+    };
+    loadToken();
     fetchComments();
-  },[])
-  
+  }, [])
+
+
   const handleReplySubmit = (parentId, reply) => {
     const recursiveAdd = (nodes) =>
       nodes.map((node) => {
@@ -43,17 +54,23 @@ const DiscussionPostScreen = () => {
     setComments((prev) => recursiveAdd(prev));
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newCommentText.trim()) return;
-    const newComment = {
-      id: Math.random().toString(),
-      content: newCommentText,
-      createdAt: new Date().toISOString(),
-      user: { username: 'Bạn', avatar: user.avatar },
-      replies: [],
-    };
-    setComments((prev) => [newComment, ...prev]);
-    setNewCommentText('');
+    try {
+      console.log(token);
+      const response = await addPostComment({ postId: post.id, content: newCommentText },token);
+      const newComment = {
+        id: response.id,
+        content: response.content,
+        createdAt: response.createdAt,
+        user: { username: 'Bạn', avatar: user.avatar },
+        replies: [],
+      };
+      setComments((prev) => [newComment, ...prev]);
+      setNewCommentText('');
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   return (
@@ -82,7 +99,7 @@ const DiscussionPostScreen = () => {
       data={comments}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
-        <CommentItemComponent comment={item} onReplySubmit={handleReplySubmit} />
+        <CommentItemComponent comment={item} onReplySubmit={handleReplySubmit} postId={post.id} />
       )}
       ListFooterComponent={
         <View style={styles.footerInput}>

@@ -1,28 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
 import moment from 'moment';
 import { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-const CommentItemComponent = ({ comment, level = 0, onReplySubmit }) => {
+import { getToken } from '../api/axiosClient';
+import { addPostCommentResponse } from '../api/postCommentApi';
+const CommentItemComponent = ({ comment, level = 0, onReplySubmit, postId }) => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const { user } = useContext(AuthContext);
+  const [token, setToken] = useState(null);
 
-  const handleReply = () => {
-    if (!replyText.trim()) return;
-    const reply = {
-      id: Math.random().toString(), // fake ID
-      content: replyText,
-      createdAt: new Date().toISOString(),
-      user: {
-        username: 'Bạn', // giả định người dùng hiện tại
-        avatar: user.avatar,
-      },
-      replies: [],
+  useEffect(() => {
+    const loadToken = async () => {
+      const token = await getToken();
+      setToken(token);
     };
-    onReplySubmit(comment.id, reply);
-    setReplyText('');
-    setShowReplyInput(false);
+    loadToken();
+  }, []);
+
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    try {
+      const replyData = {
+        postId: postId, // hoặc truyền vào qua props
+        content: replyText,
+        parentCommentId: comment.id,
+      };
+      console.log(replyData);
+      const response = await addPostCommentResponse(replyData, token);
+      console.log(response);
+      const reply = {
+        id: response.id, // fake ID
+        content: replyText,
+        createdAt: new Date().toISOString(),
+        user: {
+          username: 'Bạn', // giả định người dùng hiện tại
+          avatar: user.avatar,
+        },
+        replies: [],
+      };
+      onReplySubmit(comment.id, reply);
+      setReplyText('');
+      setShowReplyInput(false);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   return (
@@ -54,12 +77,14 @@ const CommentItemComponent = ({ comment, level = 0, onReplySubmit }) => {
         </View>
       )}
 
+      {/* Nho truyen theo postId cho phan de quy cua comment */}
       {comment.replies?.map((reply) => (
         <CommentItemComponent
           key={reply.id}
           comment={reply}
           level={level + 1}
           onReplySubmit={onReplySubmit}
+          postId={postId}
         />
       ))}
     </View>
