@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChatRoomListScreen from '../screens/ChatRoomListScreen';
 import { ChatContext } from '../contexts/ChatContext';
 import { useContext } from 'react';
+import DiscussionListScreen from '../screens/DiscussionListScreen';
 const Tab = createBottomTabNavigator();
 
 export default function MainTabNavigator() {
@@ -29,15 +30,16 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Account"
-        component={AccountScreen}
+        name="DiscussionList"
+        component={DiscussionListScreen}
         options={{
-          title: 'Tài khoản',
+          title: 'Bài đăng',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="account-circle-outline" color={color} size={size} />
+            <Icon name="chat-question-outline" color={color} size={size} />
           ),
         }}
       />
+
       <Tab.Screen
         name="ChatRoomList"
         component={ChatRoomListScreen}
@@ -47,6 +49,16 @@ export default function MainTabNavigator() {
             <Icon name="message-outline" color={color} size={size} />
           ),
           tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{
+          title: 'Tài khoản',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="account-circle-outline" color={color} size={size} />
+          ),
         }}
       />
     </Tab.Navigator>
