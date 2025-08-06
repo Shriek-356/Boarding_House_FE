@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { searchBoardingZones } from '../api/boardingZoneApi';
 import LottieView from 'lottie-react-native';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +50,31 @@ const SearchResultScreen = ({ route }) => {
         setHasMore(!data.last);
       }
     } catch (error) {
-      console.error('Lỗi khi tìm kiếm:', error);
+      // Xử lý lỗi an toàn
+      let message = 'Đã xảy ra lỗi không xác định.';
+
+      if (error.response) {
+        // Lỗi từ phía server (backend trả về)
+        if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        } else {
+          message = JSON.stringify(error.response.data);
+        }
+      } else if (error.request) {
+        // Request đã gửi đi nhưng không nhận được phản hồi
+        message = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.';
+      } else {
+        // Lỗi khi thiết lập request
+        message = error.message;
+      }
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: message,
+        position: 'bottom',
+      });
     } finally {
       setLoading(false);
     }
