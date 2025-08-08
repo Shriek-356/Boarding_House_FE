@@ -35,7 +35,7 @@ const CommentItemComponent = ({ comment, level = 0, onReplySubmit, postId }) => 
         content: replyText,
         createdAt: new Date().toISOString(),
         user: {
-          username: 'Bạn', // giả định người dùng hiện tại
+          username: 'Bạn', // giả định người dùng hiện tạiasdasd
           avatar: user.avatar,
         },
         replies: [],
