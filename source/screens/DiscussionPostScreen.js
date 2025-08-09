@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -5,152 +6,275 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
+  Image,
+  SafeAreaView,
 } from 'react-native';
 import moment from 'moment';
+import 'moment/locale/vi';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useRoute, useNavigation } from '@react-navigation/native';
+
 import CommentItemComponent from '../components/CommentItemComponent';
-import { getPostComments } from '../api/postCommentApi';
-import { useEffect, useState } from 'react';
-import { useRoute } from '@react-navigation/native';
-import { useContext } from 'react';
+import { getPostComments, addPostComment } from '../api/postCommentApi';
 import { AuthContext } from '../contexts/AuthContext';
-import { addPostComment } from '../api/postCommentApi';
 import { getToken } from '../api/axiosClient';
+
+moment.locale('vi');
 
 const DiscussionPostScreen = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const { post } = route.params;
   const { user } = useContext(AuthContext);
+
   const [comments, setComments] = useState(null);
   const [newCommentText, setNewCommentText] = useState('');
-  const [token,setToken] = useState(null);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
     const fetchComments = async () => {
-      const comments = await getPostComments(post.id);
-      console.log(comments);
-      setComments(comments);
+      const cmts = await getPostComments(post.id);
+      setComments(cmts || []);
     };
-
     const loadToken = async () => {
-      const token = await getToken();
-      setToken(token);
+      const t = await getToken();
+      setToken(t);
     };
     loadToken();
     fetchComments();
-  }, [])
-
+  }, [post.id]);
 
   const handleReplySubmit = (parentId, reply) => {
-    const recursiveAdd = (nodes) =>
+    const addRecursively = (nodes) =>
       nodes.map((node) => {
         if (node.id === parentId) {
           return { ...node, replies: [...(node.replies || []), reply] };
-        } else if (node.replies?.length > 0) {
-          return { ...node, replies: recursiveAdd(node.replies) };
+        }
+        if (node.replies?.length) {
+          return { ...node, replies: addRecursively(node.replies) };
         }
         return node;
       });
-
-    setComments((prev) => recursiveAdd(prev));
+    setComments((prev) => addRecursively(prev));
   };
 
   const handleAddComment = async () => {
     if (!newCommentText.trim()) return;
     try {
-      console.log(token);
-      const response = await addPostComment({ postId: post.id, content: newCommentText },token);
-      const newComment = {
-        id: response.id,
-        content: response.content,
-        createdAt: response.createdAt,
-        user: { username: 'Bạn', avatar: user.avatar },
+      const res = await addPostComment({ postId: post.id, content: newCommentText }, token);
+      const newCmt = {
+        id: res.id,
+        content: res.content,
+        createdAt: res.createdAt,
+        user: { username: 'Bạn', avatar: user?.avatar },
         replies: [],
       };
-      setComments((prev) => [newComment, ...prev]);
+      setComments((prev) => [newCmt, ...(prev || [])]);
       setNewCommentText('');
-    } catch (err) {
-      console.log(err);
+    } catch (e) {
+      console.log(e);
     }
   };
 
-  return (
-    <FlatList
-      ListHeaderComponent={
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>{post.title}</Text>
-          <Text style={styles.meta}>
-            Người đăng: {post.user?.username || 'Ẩn danh'} •{' '}
-            {moment(post.createdAt).fromNow()}
-          </Text>
-          <Text style={styles.label}>Nội dung:</Text>
-          <Text style={styles.description}>{post.description}</Text>
-          <Text style={styles.label}>
-            Địa chỉ:{' '}
-            <Text style={styles.normal}>
-              {post.addressRange || 'Không rõ'}
-            </Text>
-          </Text>
-          <Text style={styles.label}>
-            Giá: <Text style={styles.normal}>{post.priceRange || 'Không rõ'}</Text>
-          </Text>
-          <Text style={styles.commentHeader}>Bình luận:</Text>
+  const HeaderCard = () => (
+    <View style={styles.postCard}>
+      {/* Tiêu đề */}
+      <Text style={styles.title}>{post.title}</Text>
+
+      {/* Author */}
+      <View style={styles.authorRow}>
+        <Image
+          source={{ uri: post.user?.avatar || 'https://i.pravatar.cc/100?img=12' }}
+          style={styles.authorAvatar}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.authorName}>{post.user?.username || 'Ẩn danh'}</Text>
+          <Text style={styles.metaTime}>{moment(post.createdAt).fromNow()}</Text>
         </View>
-      }
-      data={comments}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <CommentItemComponent comment={item} onReplySubmit={handleReplySubmit} postId={post.id} />
+      </View>
+
+      {/* Nội dung */}
+      <Text style={styles.sectionLabel}>Nội dung</Text>
+      <Text style={styles.description}>{post.description}</Text>
+
+      {/* Chips phụ (tự ẩn nếu rỗng) */}
+      {(post.addressRange || post.priceRange) && (
+        <View style={styles.chipsRow}>
+          {post.addressRange ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>📍 {post.addressRange}</Text>
+            </View>
+          ) : null}
+          {post.priceRange ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>💰 {post.priceRange}</Text>
+            </View>
+          ) : null}
+        </View>
       )}
-      ListFooterComponent={
-        <View style={styles.footerInput}>
-          <TextInput
-            value={newCommentText}
-            onChangeText={setNewCommentText}
-            placeholder="Nhập bình luận..."
-            style={styles.input}
+
+      <Text style={styles.commentHeader}>Bình luận</Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
+      {/* Header app bar */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Bài thảo luận của {post.user?.username || 'Ẩn danh'}</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <FlatList
+        ListHeaderComponent={<HeaderCard />}
+        data={comments || []}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <CommentItemComponent
+            comment={item}
+            onReplySubmit={handleReplySubmit}
+            postId={post.id}
           />
-          <TouchableOpacity onPress={handleAddComment} style={styles.sendBtn}>
-            <Text style={styles.sendText}>Gửi</Text>
-          </TouchableOpacity>
-        </View>
-      }
-      contentContainerStyle={styles.container}
-    />
+        )}
+        ListFooterComponent={
+          <View style={styles.footerInput}>
+            <TextInput
+              value={newCommentText}
+              onChangeText={setNewCommentText}
+              placeholder="Nhập bình luận..."
+              placeholderTextColor="#9CA3AF"
+              style={styles.input}
+            />
+            <TouchableOpacity onPress={handleAddComment} style={styles.sendBtn} activeOpacity={0.9}>
+              <Text style={styles.sendText}>Gửi</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: '#fff' },
-  headerContainer: { marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
-  meta: { color: '#666', marginBottom: 10 },
-  label: { fontWeight: '600', marginTop: 10 },
-  normal: { fontWeight: '400' },
-  description: { fontSize: 16, marginBottom: 12 },
-  commentHeader: { fontWeight: 'bold', fontSize: 18, marginTop: 16, marginBottom: 8 },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 20,
+  // màn hình
+  container: { padding: 16, backgroundColor: '#F5F7FB' },
+
+  // header bar
+  header: {
+    backgroundColor: '#0066FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
+    paddingVertical: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
   },
-  sendBtn: {
-    backgroundColor: '#6C5CE7',
-    paddingHorizontal: 16,
+  backBtn: { padding: 6, borderRadius: 999 },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+
+  // card bài viết
+  postCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EEF1F6',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
-    borderRadius: 20,
-    marginLeft: 6,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F3F8',
   },
-  sendText: { color: '#fff', fontWeight: '600' },
+  authorAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#EEF1F6',
+  },
+  authorName: { fontSize: 14, fontWeight: '700', color: '#1F2937' },
+  metaTime: { fontSize: 12, color: '#6B7280' },
+
+  sectionLabel: { fontWeight: '800', color: '#111827', marginTop: 6, marginBottom: 6 },
+  description: { fontSize: 15, color: '#1F2937', lineHeight: 22 },
+
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#F1F5FF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DCE6FF',
+  },
+  chipText: { fontSize: 13, color: '#3B5BDB', fontWeight: '600' },
+
+  commentHeader: { fontWeight: '800', fontSize: 18, marginTop: 14, color: '#111827' },
+
+  // input bình luận
   footerInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 18,
     paddingBottom: 40,
   },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    color: '#111827',
+  },
+  sendBtn: {
+    backgroundColor: '#0066FF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 22,
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  sendText: { color: '#fff', fontWeight: '700' },
 });
 
 export default DiscussionPostScreen;
