@@ -13,10 +13,12 @@ import { AuthProvider } from '../contexts/AuthContext';
 import ChatScreen from '../screens/ChatScreen';
 import { ChatProvider } from '../contexts/ChatContext';
 import DiscussionPostScreen from '../screens/DiscussionPostScreen';
-
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function AppNavigator() {
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
       <AuthProvider>
         <ChatProvider>
         <NavigationContainer>
@@ -34,6 +36,7 @@ export default function AppNavigator() {
         </ChatProvider>
       </AuthProvider>
       <Toast config={toastConfig} />
-    </>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
