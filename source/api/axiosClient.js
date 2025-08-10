@@ -16,7 +16,7 @@ export const axiosInstance = axios.create({
 export const axiosDAuthApiInstance = (token) => {
   return axios.create({
     baseURL: BASE_URL,
-    timeout: 120000,
+    timeout: 200000,
     headers: {
       "Authorization": "Bearer " + token
     }
