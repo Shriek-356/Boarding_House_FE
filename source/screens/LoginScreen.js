@@ -30,22 +30,20 @@ const LoginScreen = ({ navigation }) => {
     } = useForm({
         resolver: yupResolver(schema),
     });
-    const { setUser } = useContext(AuthContext);//Lay context user
+    const { login } = useContext(AuthContext);//Lay context login
 
     const onSubmit = async (data) => {
         setIsLoading(true);
         try {
             const response = await loginApi(data);
+            const userProfile = await getUserProfile(response.token);
+            await login(response.token, userProfile);
             Toast.show({
                 type: 'success',
                 text1: 'Đăng nhập thành công',
                 text2: '',
                 position: 'bottom',
             });
-            const userProfile = await getUserProfile(response.token);
-            console.log('User Profile:', userProfile);
-            setUser(userProfile); // Lưu thông tin người dùng vào context
-            saveToken(response.token);//Luu token vao AsyncStorage
             // Chuyển hướng đến MainTabNavigator
             navigation.navigate('MainTab');
         } catch (error) {

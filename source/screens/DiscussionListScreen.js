@@ -8,12 +8,11 @@ import moment from 'moment';
 import LottieView from 'lottie-react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { getAllPosts, createPost } from '../api/postApi';
 import { getToken } from '../api/axiosClient';
 import { AuthContext } from '../contexts/AuthContext';
 import CreatePostModal from '../modals/CreatePostModal';
-import LoadingComponent from '../components/LoadingComponent';
+
 
 // ===== Helper: khử trùng theo id / __clientId =====
 const dedupe = (arr) => {

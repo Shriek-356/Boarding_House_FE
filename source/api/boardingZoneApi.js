@@ -23,7 +23,6 @@ export const getBoardingZoneById = async (id) => {
         const response = await axiosInstance.get(endpoints.getBoardingZoneById(id));
         return response.data;
     } catch (error) {
-        console.error("Error fetching boarding zone by ID:", error);
         throw error;
     }
 }
@@ -33,7 +32,6 @@ export const getBoardingZoneAmenities = async (id) => {
         const response = await axiosInstance.get(endpoints.getBoardingZoneAmenities(id));
         return response.data;
     } catch (error) {
-        console.error("Error fetching boarding zone amenities:", error);
         throw error;
     }
 }
@@ -43,7 +41,6 @@ export const getBoardingZoneEnvironment = async (id) => {
         const response = await axiosInstance.get(endpoints.getBoardingZoneEnvironment(id));
         return response.data;
     } catch (error) {
-        console.error("Error fetching boarding zone environment:", error);
         throw error;
     }
 }
@@ -53,7 +50,6 @@ export const getBoardingZoneTarget = async (id) => {
         const response = await axiosInstance.get(endpoints.getBoardingZoneTarget(id));
         return response.data;
     } catch (error) {
-        console.error("Error fetching boarding zone target:", error);
         throw error;
     }
 }
@@ -63,7 +59,6 @@ export const getAllBoardingZonesByLandlord = async (landLordId,page) => {
         const response = await axiosInstance.get(endpoints.getAllBoardingZonesByLandlord, { params: { landLordId, page } });     
         return response.data;
     } catch (error) {
-        console.error("Error fetching boarding zones by landlord:", error);
         throw error;
     }
 }
