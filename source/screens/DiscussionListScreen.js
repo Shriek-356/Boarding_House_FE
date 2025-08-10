@@ -88,7 +88,7 @@ const DiscussionListScreen = () => {
         }
     }, [token, user]);
 
-    const renderPostCard = ({ item }) => (
+     const renderPostCard = ({ item }) => (
         <TouchableOpacity
             style={styles.postCard}
             onPress={() => navigation.navigate('DiscussionPost', { post: item })}

@@ -15,7 +15,6 @@ export const getAllPosts = async (page,userId) => {
         const response = await axiosInstance.get(endpoints.getAllPosts,{params:{page}});
         return response.data;
     } catch (error) {
-        console.error("Error fetching posts:", error);
         throw error;
     }
 }

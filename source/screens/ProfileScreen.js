@@ -4,18 +4,18 @@ import {
   View, Text, StyleSheet, Image, FlatList, TouchableOpacity, SafeAreaView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather';
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import LottieView from 'lottie-react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-
+import { getAllPosts } from '../api/postApi';
 import { getAllBoardingZonesByLandlord } from '../api/boardingZoneApi';
-// TODO: tạo API thật cho thảo luận của user
-// import { getDiscussionsByUser } from '../api/discussionApi';
-
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import moment from 'moment';
 import { AuthContext } from '../contexts/AuthContext';
 
 const Tab = createMaterialTopTabNavigator();
 
+/* -------------------- Header -------------------- */
 const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
   const formattedDate = new Date(profileUser.createdAt).toLocaleDateString('vi-VN');
 
@@ -26,7 +26,7 @@ const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
 
       {!isCurrentUser && (
         <TouchableOpacity style={styles.messageButton} onPress={onMessage}>
-          <Icon name="message-circle" size={18} color="#fff" />
+          <FeatherIcon name="message-circle" size={18} color="#fff" />
           <Text style={styles.messageText}>Nhắn tin</Text>
         </TouchableOpacity>
       )}
@@ -34,23 +34,24 @@ const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
       <Text style={styles.name}>{profileUser.firstname} {profileUser.lastname}</Text>
 
       <View style={styles.infoRow}>
-        <Icon name="mail" size={16} color="#6B7280" />
+        <FeatherIcon name="mail" size={16} color="#6B7280" />
         <Text style={styles.infoText}>{profileUser.email}</Text>
       </View>
       <View style={styles.infoRow}>
-        <Icon name="calendar" size={16} color="#6B7280" />
+        <FeatherIcon name="calendar" size={16} color="#6B7280" />
         <Text style={styles.infoText}>Tham gia: {formattedDate}</Text>
       </View>
     </View>
   );
 };
 
-/* -------------------- TAB: Bài đăng -------------------- */
+/* -------------------- TAB: Bài đăng (có refresh) -------------------- */
 const PostsTab = ({ profileUserId }) => {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const fetchUserPosts = useCallback(async () => {
@@ -73,7 +74,6 @@ const PostsTab = ({ profileUserId }) => {
         err?.response?.data ||
         err?.message ||
         'Có lỗi xảy ra.';
-
       if (msg.includes('Không tìm thấy bài đăng trọ')) {
         setHasMore(false);
         if (page === 0) setPosts([]);
@@ -86,12 +86,37 @@ const PostsTab = ({ profileUserId }) => {
     }
   }, [loading, hasMore, page, profileUserId]);
 
+  // REFRESH: tải lại trang 0
+  const onRefresh = useCallback(async () => {
+    if (loading) return;
+    setRefreshing(true);
+    try {
+      const data = await getAllBoardingZonesByLandlord(profileUserId, 0);
+      const content = Array.isArray(data?.content) ? data.content : [];
+      setPosts(content);
+      setPage(1);
+      setHasMore(!data?.last);
+      setError('');
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        'Có lỗi xảy ra.';
+      setError(msg.includes('Không tìm thấy bài đăng trọ') ? '' : msg);
+      setPosts([]);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loading, profileUserId]);
+
   useEffect(() => {
     fetchUserPosts();
   }, [fetchUserPosts]);
 
   const renderPostCard = ({ item }) => (
-    <TouchableOpacity style={styles.postCard}>
+    <TouchableOpacity style={styles.postCardBox}>
       <Image source={{ uri: item.images?.[0] }} style={styles.postImage} />
       <View style={styles.postContent}>
         <Text numberOfLines={2} style={styles.postTitle}>{item.name}</Text>
@@ -106,7 +131,7 @@ const PostsTab = ({ profileUserId }) => {
   return (
     <FlatList
       data={posts}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => String(item.id)}
       renderItem={renderPostCard}
       onEndReached={() => { if (!loading && hasMore) fetchUserPosts(); }}
       onEndReachedThreshold={0.3}
@@ -123,39 +148,36 @@ const PostsTab = ({ profileUserId }) => {
         ) : null
       }
       ListEmptyComponent={
-        !loading ? (
+        !loading && !refreshing ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyPrimary}>Không tìm thấy bài đăng trọ nào!</Text>
             {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
     />
   );
 };
 
-/* -------------------- TAB: Bài thảo luận -------------------- */
+/* --------------- TAB: Bài thảo luận (có refresh) --------------- */
 const DiscussionsTab = ({ profileUserId }) => {
-  // TODO: thay bằng API thật của bạn
-  const fakeFetch = async (page) => {
-    // ví dụ rỗng:
-    return { content: [], last: true };
-  };
-
+  const navigation = useNavigation();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const fetchDiscussions = useCallback(async () => {
     if (loading || !hasMore) return;
     setLoading(true);
     try {
-      // const data = await getDiscussionsByUser(profileUserId, page);
-      const data = await fakeFetch(page);
+      const data = await getAllPosts(page, profileUserId); // giữ nguyên signature của bạn
       if (Array.isArray(data?.content)) {
         setItems(prev => [...prev, ...data.content]);
         setPage(prev => prev + 1);
@@ -179,21 +201,69 @@ const DiscussionsTab = ({ profileUserId }) => {
     }
   }, [loading, hasMore, page, profileUserId]);
 
+  // REFRESH
+  const onRefresh = useCallback(async () => {
+    if (loading) return;
+    setRefreshing(true);
+    try {
+      const data = await getAllPosts(0, profileUserId);
+      const content = Array.isArray(data?.content) ? data.content : [];
+      setItems(content);
+      setPage(1);
+      setHasMore(!data?.last);
+      setError('');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra.';
+      setError(msg.includes('Không có bài thảo luận') ? '' : msg);
+      setItems([]);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loading, profileUserId]);
+
   useEffect(() => {
     fetchDiscussions();
   }, [fetchDiscussions]);
 
   const renderDiscussion = ({ item }) => (
-    <TouchableOpacity style={styles.postCard}>
+    <TouchableOpacity
+      style={styles.postCardBox}
+      onPress={() => navigation.navigate('DiscussionPost', { post: item })}
+      activeOpacity={0.9}
+    >
       <Text numberOfLines={2} style={styles.postTitle}>{item.title}</Text>
-      <Text style={styles.postAddress}>{item.createdAt}</Text>
+
+      <View style={styles.userInfoContainer}>
+        <Image
+          source={{ uri: item.user?.avatar || 'https://i.pravatar.cc/100?img=12' }}
+          style={styles.avatarDiscussion}
+        />
+        <View style={styles.userTextContainer}>
+          <Text style={styles.username}>{item.user?.username || 'Ẩn danh'}</Text>
+          <Text style={styles.postTime}>{moment(item.createdAt).fromNow()}</Text>
+        </View>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Thảo luận</Text>
+        </View>
+      </View>
+
+      <Text numberOfLines={3} style={styles.postDescription}>{item.description}</Text>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.metaRow}>
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6B7280" />
+          <Text style={styles.metaText}>Xem chi tiết</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+      </View>
     </TouchableOpacity>
   );
 
   return (
     <FlatList
       data={items}
-      keyExtractor={(item, idx) => item.id ?? String(idx)}
+      keyExtractor={(item, idx) => String(item.id ?? idx)}
       renderItem={renderDiscussion}
       onEndReached={() => { if (!loading && hasMore) fetchDiscussions(); }}
       onEndReachedThreshold={0.3}
@@ -210,19 +280,22 @@ const DiscussionsTab = ({ profileUserId }) => {
         ) : null
       }
       ListEmptyComponent={
-        !loading ? (
+        !loading && !refreshing ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyPrimary}>Chưa có bài thảo luận nào!</Text>
             {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
     />
   );
 };
 
+/* -------------------- Screen chính -------------------- */
 const UserProfileScreen = () => {
   const { profileUser } = useRoute().params;
   const navigation = useNavigation();
@@ -237,14 +310,12 @@ const UserProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header chung */}
       <HeaderBlock
         profileUser={profileUser}
         isCurrentUser={isCurrentUser}
         onMessage={handleMessage}
       />
 
-      {/* Tabs */}
       <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
         <Tab.Navigator
           screenOptions={{
@@ -320,30 +391,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
-  /* Card */
-  postCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 3,
+  /* Card (dùng chung cho 2 tab) */
+  postCardBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginHorizontal: 14,
+    marginBottom: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EEF1F6',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   postImage: {
     width: '100%', height: 220,
     borderRadius: 8, marginBottom: 12, resizeMode: 'cover',
   },
   postContent: { padding: 10 },
-  postTitle: { fontSize: 15, fontWeight: '600', color: '#1F2937' },
+  postTitle: { fontSize: 17, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 22 },
   postAddress: { fontSize: 13, color: '#6B7280', marginTop: 4 },
   postPrice: { color: '#EF4444', fontWeight: 'bold', marginTop: 4 },
+  postDescription: { fontSize: 14, color: '#374151', marginTop: 2, marginBottom: 8, lineHeight: 20 },
 
+  userInfoContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
+  avatarDiscussion: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#E5E7EB', borderWidth: 1, borderColor: '#EEF1F6',
+  },
+  userTextContainer: { flex: 1 },
+  username: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  postTime: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+
+  badge: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: '#F1F5FF', borderRadius: 12,
+    borderWidth: 1, borderColor: '#DCE6FF',
+  },
+  badgeText: { fontSize: 12, color: '#3B5BDB', fontWeight: '700' },
+
+  cardFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EEF1F6',
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', columnGap: 6 },
+  metaText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+
+  /* Loading more */
   loadingMoreContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 20,
   },
   loadingText: { marginLeft: 10, fontSize: 14, color: '#6B7280' },
 
+  /* Button nhắn tin */
   messageButton: {
     flexDirection: 'row',
     alignItems: 'center',
