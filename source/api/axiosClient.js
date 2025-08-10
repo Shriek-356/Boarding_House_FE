@@ -4,11 +4,11 @@ import axios from 'axios';
 
 const BASE_URL = 'http://192.168.1.149:8080/boarding_house/api';
 export const axiosInstance = axios.create({
-    baseURL: BASE_URL,
-    timeout: 5000,
-    headers: {
-        'Content-Type': 'application/json'
-    }
+  baseURL: BASE_URL,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 
@@ -16,7 +16,7 @@ export const axiosInstance = axios.create({
 export const axiosDAuthApiInstance = (token) => {
   return axios.create({
     baseURL: BASE_URL,
-    timeout: 5000,
+    timeout: 30000,
     headers: {
       Authorization: `Bearer ${token}`,
     },

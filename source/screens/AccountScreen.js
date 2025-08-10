@@ -4,11 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthContext } from '../contexts/AuthContext';
 import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useMemo } from 'react';
 
 export default function AccountScreen() {
   const { user, logout } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  //Check role LANDLORD từ user trong Context
+  const isLandlord = useMemo(() => {
+    const names = (user?.userRoles ?? []).map(
+      ur => (ur?.role?.name ?? '').toUpperCase()
+    );
+    return names.includes('LANDLORD');
+  }, [user?.userRoles]);
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -67,6 +75,17 @@ export default function AccountScreen() {
           <Separator />
           <MenuItem icon="person-circle-outline" label="Trang cá nhân" onPress={() => navigation.navigate('Profile', { profileUser: user })} />
         </View>
+
+        {/* ⭐ Chỉ hiện khi CHƯA là LANDLORD */}
+        {!isLandlord && (
+          <View style={styles.card}>
+            <MenuItem
+              icon="home-outline"
+              label="Gửi yêu cầu làm chủ trọ"
+              onPress={() => navigation.navigate('LandlordRequest', { userId: user?.id })}
+            />
+          </View>
+        )}
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBar} onPress={handleLogout}>
