@@ -6,8 +6,12 @@ const endpoints = {
     createPost:'/create-post'
 }
 
-export const getAllPosts = async (page) => {
+export const getAllPosts = async (page,userId) => {
     try {
+        if(userId) {
+            const response = await axiosInstance.get(endpoints.getAllPosts,{params:{page,userId}});
+            return response.data;
+        }
         const response = await axiosInstance.get(endpoints.getAllPosts,{params:{page}});
         return response.data;
     } catch (error) {

@@ -41,7 +41,7 @@ const DiscussionListScreen = () => {
         if (loading || !hasMore) return;
         setLoading(true);
         try {
-            const data = await getAllPosts(page);
+            const data = await getAllPosts(page,null);
             if (Array.isArray(data?.content)) {
                 setPosts(prev => dedupe([...prev, ...data.content]));
                 setPage(prev => prev + 1);
