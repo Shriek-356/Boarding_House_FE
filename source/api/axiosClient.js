@@ -16,12 +16,12 @@ export const axiosInstance = axios.create({
 export const axiosDAuthApiInstance = (token) => {
   return axios.create({
     baseURL: BASE_URL,
-    timeout: 30000,
+    timeout: 120000,
     headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-};
+      "Authorization": "Bearer " + token
+    }
+  })
+}
 
 export const saveToken = async (token) => {
   try {
