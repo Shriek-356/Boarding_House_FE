@@ -1,5 +1,5 @@
-import { axiosInstance } from "./axiosClient";
-
+import { axiosInstance} from "./axiosClient";
+import { axiosDAuthApiInstance } from "./axiosClient";
 export const endpoints = {
     searchBoardingZones: "/search-zones",
     getBoardingZoneById: (id) => `/get-boarding-zone/${id}`,
@@ -7,6 +7,7 @@ export const endpoints = {
     getBoardingZoneEnvironment: (id) => `/get-boarding-zone-environment/${id}`,
     getBoardingZoneTarget: (id) => `/get-boarding-zone-target/${id}`,
     getAllBoardingZonesByLandlord: "/get-all-boarding-zone",
+    addBoardingZone: "/add-boarding-zone"
 }
 
 export const searchBoardingZones = async (filters) => {
@@ -62,3 +63,18 @@ export const getAllBoardingZonesByLandlord = async (landLordId,page) => {
         throw error;
     }
 }
+
+export const addBoardingZoneFormData = async (formData, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).post(endpoints.addBoardingZone, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+

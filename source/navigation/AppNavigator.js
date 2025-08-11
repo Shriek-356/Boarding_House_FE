@@ -36,6 +36,7 @@ export default function AppNavigator() {
             <Stack.Screen name="DiscussionPost" component={DiscussionPostScreen} />
             <Stack.Screen name="LandlordRequest" component={LandlordRequestScreen} />
             <Stack.Screen name="BoardingZoneManager" component={BoardingZoneManagerScreen} />
+            <Stack.Screen name="CreateBoardingZone" component={CreateBoardingZoneScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>
