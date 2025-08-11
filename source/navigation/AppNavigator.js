@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LandlordRequestScreen from '../screens/LandLordRequestScreen';
 import BoardingZoneManagerScreen from '../screens/BoardingZoneManagerScreen';
+import CreateBoardingZoneScreen from '../screens/CreateBoardingZoneScreen';
 export default function AppNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
