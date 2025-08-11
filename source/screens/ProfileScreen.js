@@ -113,7 +113,7 @@ const PostsTab = ({ profileUserId }) => {
 
   useEffect(() => {
     fetchUserPosts();
-  }, [fetchUserPosts]);
+  }, []);
 
   const renderPostCard = ({ item }) => (
     <TouchableOpacity style={styles.postCardBox}>
@@ -151,7 +151,6 @@ const PostsTab = ({ profileUserId }) => {
         !loading && !refreshing ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyPrimary}>Không tìm thấy bài đăng trọ nào!</Text>
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }
@@ -224,7 +223,7 @@ const DiscussionsTab = ({ profileUserId }) => {
 
   useEffect(() => {
     fetchDiscussions();
-  }, [fetchDiscussions]);
+  }, []);
 
   const renderDiscussion = ({ item }) => (
     <TouchableOpacity
@@ -283,7 +282,6 @@ const DiscussionsTab = ({ profileUserId }) => {
         !loading && !refreshing ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyPrimary}>Chưa có bài thảo luận nào!</Text>
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }

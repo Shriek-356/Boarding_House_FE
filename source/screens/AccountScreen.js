@@ -76,13 +76,23 @@ export default function AccountScreen() {
           <MenuItem icon="person-circle-outline" label="Trang cá nhân" onPress={() => navigation.navigate('Profile', { profileUser: user })} />
         </View>
 
-        {/* ⭐ Chỉ hiện khi CHƯA là LANDLORD */}
+        {/* Chỉ hiện khi CHƯA là LANDLORD */}
         {!isLandlord && (
           <View style={styles.card}>
             <MenuItem
               icon="home-outline"
               label="Gửi yêu cầu làm chủ trọ"
               onPress={() => navigation.navigate('LandlordRequest', { userId: user?.id })}
+            />
+          </View>
+        )}
+
+        {isLandlord && (
+          <View style={styles.card}>
+            <MenuItem
+              icon="home-outline"
+              label="Quản lý trọ"
+              onPress={() => navigation.navigate('LandlordPosts', { userId: user?.id })}
             />
           </View>
         )}
