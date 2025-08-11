@@ -7,7 +7,10 @@ export const endpoints = {
     getBoardingZoneEnvironment: (id) => `/get-boarding-zone-environment/${id}`,
     getBoardingZoneTarget: (id) => `/get-boarding-zone-target/${id}`,
     getAllBoardingZonesByLandlord: "/get-all-boarding-zone",
-    addBoardingZone: "/add-boarding-zone"
+    addBoardingZone: "/add-boarding-zone",
+    addBoardingZoneAmenity: "/add-boarding-zone-amenity",
+    addBoardingZoneEnvironment: "/add-boarding-zone-environment",
+    addBoardingZoneTarget: "/add-boarding-zone-target",
 }
 
 export const searchBoardingZones = async (filters) => {
@@ -78,3 +81,29 @@ export const addBoardingZoneFormData = async (formData, token) => {
     }
 }
 
+export const addBoardingZoneAmenity = async (data, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).post(endpoints.addBoardingZoneAmenity, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const addBoardingZoneEnvironment = async (data, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).post(endpoints.addBoardingZoneEnvironment, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const addBoardingZoneTarget = async (data, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).post(endpoints.addBoardingZoneTarget, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
