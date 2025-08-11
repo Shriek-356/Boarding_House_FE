@@ -16,6 +16,7 @@ import DiscussionPostScreen from '../screens/DiscussionPostScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LandlordRequestScreen from '../screens/LandLordRequestScreen';
+import BoardingZoneManagerScreen from '../screens/BoardingZoneManagerScreen';
 export default function AppNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -33,6 +34,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="DiscussionPost" component={DiscussionPostScreen} />
             <Stack.Screen name="LandlordRequest" component={LandlordRequestScreen} />
+            <Stack.Screen name="BoardingZoneManager" component={BoardingZoneManagerScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>

@@ -92,7 +92,7 @@ export default function AccountScreen() {
             <MenuItem
               icon="home-outline"
               label="Quản lý trọ"
-              onPress={() => navigation.navigate('LandlordPosts', { userId: user?.id })}
+              onPress={() => navigation.navigate('BoardingZoneManager')}
             />
           </View>
         )}
