@@ -96,6 +96,7 @@ function RoomsPanel({ zoneId, onStats, onSwitchTab }) {
   const [hasMore, setHasMore]   = useState(true);
   const [error, setError]       = useState('');
   const [didLoad, setDidLoad]   = useState(false);
+  const navigation = useNavigation();
 
   // Refs chống trùng lặp
   const pageRef = useRef(0);
@@ -170,7 +171,7 @@ function RoomsPanel({ zoneId, onStats, onSwitchTab }) {
   }, [loading, hasMore, appendPage]);
 
   const onView = (id) => {};
-  const onEdit = (id) => {};
+  const onEdit = (item) => {navigation.navigate('EditRoom', { item });};
   const onDelete = (id) => {
     Alert.alert('Xác nhận', 'Xoá phòng này?', [
       { text: 'Huỷ' },
@@ -219,11 +220,11 @@ function RoomsPanel({ zoneId, onStats, onSwitchTab }) {
 
           <View style={styles.actionsRow}>
             <View style={styles.leftActions}>
-              <TouchableOpacity style={styles.pillBtn} onPress={() => onView(item.id)}>
+              <TouchableOpacity style={styles.pillBtn} onPress={() => onView(item)}>
                 <Text style={styles.pillBtnText}>Xem</Text>
                 <Feather name="chevron-right" size={16} color="#0F172A" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.ghostBtn} onPress={() => onEdit(item.id)}>
+              <TouchableOpacity style={styles.ghostBtn} onPress={() => onEdit(item)}>
                 <Feather name="edit-3" size={16} color="#0F172A" />
                 <Text style={styles.ghostBtnText}>Sửa</Text>
               </TouchableOpacity>

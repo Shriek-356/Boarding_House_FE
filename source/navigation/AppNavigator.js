@@ -19,6 +19,7 @@ import LandlordRequestScreen from '../screens/LandLordRequestScreen';
 import BoardingZoneManagerScreen from '../screens/BoardingZoneManagerScreen';
 import CreateBoardingZoneScreen from '../screens/CreateBoardingZoneScreen';
 import ZoneManagementScreen from '../screens/ZoneManagementScreen';
+import EditRoomScreen from '../screens/EditRoomScreen';
 export default function AppNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -39,6 +40,7 @@ export default function AppNavigator() {
             <Stack.Screen name="BoardingZoneManager" component={BoardingZoneManagerScreen} />
             <Stack.Screen name="CreateBoardingZone" component={CreateBoardingZoneScreen} />
             <Stack.Screen name="ZoneManagement" component={ZoneManagementScreen} />
+            <Stack.Screen name="EditRoom" component={EditRoomScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>
