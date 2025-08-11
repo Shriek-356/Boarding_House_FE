@@ -101,7 +101,7 @@ const BoardingZoneManagerScreen = () => {
     }, [profileUserId]);
 
     // ====== HANDLERS UI ======
-    const onView = (id) => navigation.navigate('ZoneDetail', { id });
+    const onView = (item) => navigation.navigate('ZoneManagement', { item });
     const onEdit = (id) => navigation.navigate('EditBoardingZone', { id });
     const onAdd = () => navigation.navigate('CreateBoardingZone');
 
@@ -181,7 +181,7 @@ const BoardingZoneManagerScreen = () => {
                     <View style={styles.actionsRow}>
                         {/* Left actions */}
                         <View style={styles.leftActions}>
-                            <TouchableOpacity style={styles.pillBtn} onPress={() => onView(item.id)}>
+                            <TouchableOpacity style={styles.pillBtn} onPress={() => onView(item)}>
                                 <Text style={styles.pillBtnText}>Xem</Text>
                                 <FeatherIcon name="chevron-right" size={16} color="#0F172A" />
                             </TouchableOpacity>

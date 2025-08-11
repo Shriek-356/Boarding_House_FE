@@ -18,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LandlordRequestScreen from '../screens/LandLordRequestScreen';
 import BoardingZoneManagerScreen from '../screens/BoardingZoneManagerScreen';
 import CreateBoardingZoneScreen from '../screens/CreateBoardingZoneScreen';
+import ZoneManagementScreen from '../screens/ZoneManagementScreen';
 export default function AppNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -37,6 +38,7 @@ export default function AppNavigator() {
             <Stack.Screen name="LandlordRequest" component={LandlordRequestScreen} />
             <Stack.Screen name="BoardingZoneManager" component={BoardingZoneManagerScreen} />
             <Stack.Screen name="CreateBoardingZone" component={CreateBoardingZoneScreen} />
+            <Stack.Screen name="ZoneManagement" component={ZoneManagementScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>

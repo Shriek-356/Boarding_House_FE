@@ -71,7 +71,7 @@ const BoardingDetailScreen = () => {
                 getBoardingZoneAmenities(id),
                 getBoardingZoneTarget(id),
                 getBoardingZoneEnvironment(id),
-                getRoomsOfBoardingZone(id)
+                getRoomsOfBoardingZone(id, 0)
             ]);
 
             setRoom({
