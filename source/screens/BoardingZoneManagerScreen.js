@@ -102,7 +102,7 @@ const BoardingZoneManagerScreen = () => {
 
     // ====== HANDLERS UI ======
     const onView = (item) => navigation.navigate('ZoneManagement', { item });
-    const onEdit = (id) => navigation.navigate('EditBoardingZone', { id });
+    const onEdit = (item) => navigation.navigate('EditBoardingZone', { item });
     const onAdd = () => navigation.navigate('CreateBoardingZone');
 
     const onToggleVisible = async (id, next) => {
@@ -189,7 +189,7 @@ const BoardingZoneManagerScreen = () => {
 
                         {/* Right actions */}
                         <View style={styles.rightActions}>
-                            <TouchableOpacity style={styles.iconBtn} onPress={() => onEdit(item.id)}>
+                            <TouchableOpacity style={styles.iconBtn} onPress={() => onEdit(item)}>
                                 <FeatherIcon name="edit-3" size={18} color="#0F172A" />
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.iconBtn} onPress={() => onToggleVisible(item.id, !item.isVisible)}>

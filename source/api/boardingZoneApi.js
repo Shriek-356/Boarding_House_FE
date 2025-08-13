@@ -1,4 +1,4 @@
-import { axiosInstance} from "./axiosClient";
+import { axiosInstance } from "./axiosClient";
 import { axiosDAuthApiInstance } from "./axiosClient";
 export const endpoints = {
     searchBoardingZones: "/search-zones",
@@ -11,6 +11,10 @@ export const endpoints = {
     addBoardingZoneAmenity: "/add-boarding-zone-amenity",
     addBoardingZoneEnvironment: "/add-boarding-zone-environment",
     addBoardingZoneTarget: "/add-boarding-zone-target",
+    updateBoardingZone: "/update-boarding-zone",
+    deleteBoardingZoneAmenity: (id) => `/delete-boarding-zone-amenity/${id}`,
+    deleteBoardingZoneTarget: (id) => `/delete-boarding-zone-target/${id}`,
+    deleteBoardingZoneEnvironment: (id) => `/delete-boarding-zone-environment/${id}`
 }
 
 export const searchBoardingZones = async (filters) => {
@@ -58,9 +62,9 @@ export const getBoardingZoneTarget = async (id) => {
     }
 }
 
-export const getAllBoardingZonesByLandlord = async (landLordId,page) => {
+export const getAllBoardingZonesByLandlord = async (landLordId, page) => {
     try {
-        const response = await axiosInstance.get(endpoints.getAllBoardingZonesByLandlord, { params: { landLordId, page } });     
+        const response = await axiosInstance.get(endpoints.getAllBoardingZonesByLandlord, { params: { landLordId, page } });
         return response.data;
     } catch (error) {
         throw error;
@@ -102,6 +106,47 @@ export const addBoardingZoneEnvironment = async (data, token) => {
 export const addBoardingZoneTarget = async (data, token) => {
     try {
         const response = await axiosDAuthApiInstance(token).post(endpoints.addBoardingZoneTarget, data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const updateBoardingZone = async (data, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).patch(endpoints.updateBoardingZone, data, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            },
+        });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const deleteBoardingZoneAmenity = async (amenityId, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).delete(endpoints.deleteBoardingZoneAmenity(amenityId));
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const deleteBoardingZoneTarget = async (targetId, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).delete(endpoints.deleteBoardingZoneTarget(targetId));
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const deleteBoardingZoneEnvironment = async (environmentId, token) => {
+    try {
+        const response = await axiosDAuthApiInstance(token).delete(endpoints.deleteBoardingZoneEnvironment(environmentId));
         return response.data;
     } catch (error) {
         throw error;

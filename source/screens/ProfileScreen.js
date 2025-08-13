@@ -1,331 +1,472 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+// UserProfileScreen.js
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import {
-  SafeAreaView, View, Text, StyleSheet, TouchableOpacity,
-  FlatList, Image, Alert, ScrollView
+  View, Text, StyleSheet, Image, FlatList, TouchableOpacity, SafeAreaView,
 } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import LottieView from 'lottie-react-native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { getAllPosts } from '../api/postApi';
+import { getAllBoardingZonesByLandlord } from '../api/boardingZoneApi';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import moment from 'moment';
 
-import { getRoomsByZonePaged, /*, deleteRoom, updateRoomVisibility */ 
-getRoomsOfBoardingZone} from '../api/roomApi';
+import { AuthContext } from '../contexts/AuthContext';
 
-const PRIMARY = '#2563EB';
-const BORDER  = '#E2E8F0';
-const BG      = '#F8FAFC';
-const TEXT    = '#0F172A';
-const MUTED   = '#64748B';
+const Tab = createMaterialTopTabNavigator();
 
-const MENU = [
-  { key: 'rooms',   label: 'Phòng',      icon: 'home'  },
-  { key: 'tenants', label: 'Khách thuê', icon: 'users' },
-];
-
-export default function ZoneManagementScreen() {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const zoneId   = route.params?.id;
-  const zoneName = route.params?.name || 'Dãy trọ';
-
-  const [active, setActive] = useState('rooms');
-  const [stats, setStats]   = useState({ totalRooms: 0 });
-
-  const Panel = useMemo(() => {
-    if (active === 'rooms') return <RoomsPanel zoneId={zoneId} onStats={setStats} />;
-    return (
-      <Placeholder
-        icon="users"
-        title="Chưa có khách thuê"
-        desc="Thêm khách thuê để bắt đầu quản lý hợp đồng và hoá đơn."
-        primaryText="Thêm khách thuê"
-        onPrimary={() => navigation.navigate('CreateTenant', { zoneId })}
-      />
-    );
-  }, [active, zoneId, navigation]);
+/* -------------------- Header -------------------- */
+const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
+  const formattedDate = new Date(profileUser.createdAt).toLocaleDateString('vi-VN');
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: BG}}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{flex: 1}}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{zoneName}</Text>
-          <Text style={styles.headerSub}>Tổng phòng: {stats.totalRooms}</Text>
-        </View>
-        <TouchableOpacity style={styles.headerAction} onPress={() => navigation.goBack()}>
-          <Feather name="x" size={18} color={TEXT} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.header}>
+      <View style={styles.curvedBackground} />
+      <Image source={{ uri: profileUser.avatar }} style={styles.avatar} />
 
-      {/* Pills */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.menuWrap}>
-        {MENU.map(it => {
-          const isActive = active === it.key;
-          return (
-            <TouchableOpacity
-              key={it.key}
-              style={[styles.menuItem, isActive && styles.menuItemActive]}
-              onPress={() => setActive(it.key)}
-            >
-              <Feather name={it.icon} size={16} color={isActive ? '#fff' : TEXT} style={{marginRight: 6}} />
-              <Text style={[styles.menuText, isActive && styles.menuTextActive]}>{it.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Content */}
-      <View style={{flex: 1}}>{Panel}</View>
-
-      {/* FAB */}
-      {active === 'rooms' ? (
-        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateRoom', { zoneId })}>
-          <Feather name="plus" size={22} color="#fff" />
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateTenant', { zoneId })}>
-          <Feather name="user-plus" size={22} color="#fff" />
+      {!isCurrentUser && (
+        <TouchableOpacity style={styles.messageButton} onPress={onMessage}>
+          <FeatherIcon name="message-circle" size={18} color="#fff" />
+          <Text style={styles.messageText}>Nhắn tin</Text>
         </TouchableOpacity>
       )}
-    </SafeAreaView>
-  );
-}
 
-/* ---------------- Rooms (with pagination) ---------------- */
-function RoomsPanel({ zoneId, onStats }) {
-  const [rooms, setRooms]   = useState([]);
-  const [page, setPage]     = useState(0);
+      <Text style={styles.name}>{profileUser.firstname} {profileUser.lastname}</Text>
+
+      <View style={styles.infoRow}>
+        <FeatherIcon name="mail" size={16} color="#6B7280" />
+        <Text style={styles.infoText}>{profileUser.email}</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <FeatherIcon name="calendar" size={16} color="#6B7280" />
+        <Text style={styles.infoText}>Tham gia: {formattedDate}</Text>
+      </View>
+    </View>
+  );
+};
+
+/* -------------------- TAB: Bài đăng (có refresh) -------------------- */
+const PostsTab = ({ profileUserId }) => {
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchRooms = useCallback(async () => {
-    if (loading || !hasMore || !zoneId) return;
+  const fetchUserPosts = useCallback(async () => {
+    if (loading || !hasMore) return;
     setLoading(true);
     try {
-      // API trả { content, last, totalElements, ... }
-      const data = await getRoomsOfBoardingZone(zoneId);
-      const content = Array.isArray(data?.content) ? data.content : [];
-      setRooms(prev => [...prev, ...content]);
-      setPage(prev => prev + 1);
-      setHasMore(!data?.last);
-      onStats?.({ totalRooms: data?.totalElements ?? (rooms.length + content.length) });
-      setError('');
-    } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || 'Có lỗi xảy ra.';
-      setError(msg);
-      if (page === 0) {
-        setRooms([]);
-        onStats?.({ totalRooms: 0 });
+      const data = await getAllBoardingZonesByLandlord(profileUserId, page);
+      if (Array.isArray(data?.content)) {
+        setPosts(prev => [...prev, ...data.content]);
+        setPage(prev => prev + 1);
+        setHasMore(!data.last);
+        setError('');
+      } else {
+        setHasMore(false);
+        if (page === 0) setPosts([]);
       }
-      setHasMore(false);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        'Có lỗi xảy ra.';
+
+      if (msg.includes('Không tìm thấy bài đăng trọ')) {
+        setHasMore(false);
+        if (page === 0) setPosts([]);
+        setError('');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, zoneId, page, rooms.length, onStats]);
+  }, [loading, hasMore, page, profileUserId]);
 
+  // REFRESH: tải lại trang 0
   const onRefresh = useCallback(async () => {
-    if (loading || !zoneId) return;
+    if (loading) return;
     setRefreshing(true);
     try {
-      const data = await getRoomsByZonePaged(zoneId, 0);
+      const data = await getAllBoardingZonesByLandlord(profileUserId, 0);
       const content = Array.isArray(data?.content) ? data.content : [];
-      setRooms(content);
+      setPosts(content);
       setPage(1);
       setHasMore(!data?.last);
-      onStats?.({ totalRooms: data?.totalElements ?? content.length });
       setError('');
-    } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || 'Có lỗi xảy ra.';
-      setError(msg);
-      setRooms([]);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        'Có lỗi xảy ra.';
+      setError(msg.includes('Không tìm thấy bài đăng trọ') ? '' : msg);
+      setPosts([]);
       setHasMore(false);
-      onStats?.({ totalRooms: 0 });
     } finally {
       setRefreshing(false);
     }
-  }, [loading, zoneId, onStats]);
+  }, [loading, profileUserId]);
 
   useEffect(() => {
-    if (!zoneId) return;
-    // reset khi đổi zone
-    setRooms([]); setPage(0); setHasMore(true); setError('');
-    fetchRooms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoneId]);
+    fetchUserPosts();
+  }, [fetchUserPosts]);
 
-  const onView = (id) => {}; // navigation.navigate('RoomDetail', { id })
-  const onEdit = (id) => {}; // navigation.navigate('EditRoom', { id })
-  const onDelete = (id) => {
-    Alert.alert('Xác nhận', 'Xoá phòng này?', [
-      { text: 'Huỷ' },
-      { text: 'Xoá', style: 'destructive', onPress: () => {
-        // await deleteRoom(id)
-        setRooms(prev => prev.filter(r => r.id !== id));
-        onStats?.({ totalRooms: Math.max(0, rooms.length - 1) });
-      }}
-    ]);
-  };
-
-  const renderRoom = ({ item }) => {
-    const img = item.images?.[0];
-    const tags = (item.roomAmenities || []).slice(0, 3).map(a => a.amenityName);
-    return (
-      <View style={styles.card}>
-        <View style={styles.leftCol}>
-          {img ? <Image source={{ uri: img }} style={styles.image} /> :
-            <View style={styles.imagePlaceholder}><Feather name="image" size={20} color="#94A3B8" /></View>}
-        </View>
-
-        <View style={styles.rightCol}>
-          <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.subText}>
-            {item.area ? `${item.area} m² · ` : ''}{item.maxPeople ? `${item.maxPeople} người · ` : ''}{item.available ? 'Có thể thuê' : 'Tạm hết'}
-          </Text>
-          <Text style={styles.price}>{item.price?.toLocaleString('vi-VN')}đ/tháng</Text>
-
-          {tags.length > 0 && (
-            <View style={styles.tagRow}>
-              {tags.map(t => <View key={t} style={styles.tag}><Text style={styles.tagText}>{t}</Text></View>)}
-            </View>
-          )}
-
-          <View style={styles.actionsRow}>
-            <View style={styles.leftActions}>
-              <TouchableOpacity style={styles.pillBtn} onPress={() => onView(item.id)}>
-                <Text style={styles.pillBtnText}>Xem</Text>
-                <Feather name="chevron-right" size={16} color="#0F172A" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ghostBtn} onPress={() => onEdit(item.id)}>
-                <Feather name="edit-3" size={16} color="#0F172A" />
-                <Text style={styles.ghostBtnText}>Sửa</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.rightActions}>
-              <TouchableOpacity style={[styles.iconBtn, styles.iconBtnDanger]} onPress={() => onDelete(item.id)}>
-                <Feather name="trash-2" size={18} color="#DC2626" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+  const renderPostCard = ({ item }) => (
+    <TouchableOpacity style={styles.postCardBox}>
+      <Image source={{ uri: item.images?.[0] }} style={styles.postImage} />
+      <View style={styles.postContent}>
+        <Text numberOfLines={2} style={styles.postTitle}>{item.name}</Text>
+        <Text style={styles.postAddress}>{item.address}</Text>
+        <Text style={styles.postPrice}>
+          {item.expectedPrice?.toLocaleString('vi-VN')}đ/tháng
+        </Text>
       </View>
-    );
-  };
+    </TouchableOpacity>
+  );
 
   return (
     <FlatList
-      data={rooms}
-      keyExtractor={(it, idx) => String(it.id ?? idx)}
-      renderItem={renderRoom}
-      onEndReached={() => { if (!loading && hasMore) fetchRooms(); }}
+      data={posts}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={renderPostCard}
+      onEndReached={() => { if (!loading && hasMore) fetchUserPosts(); }}
       onEndReachedThreshold={0.3}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 36, flexGrow: 1 }}
+      ListHeaderComponent={<Text style={styles.tabTitle}>Bài đăng</Text>}
+      ListFooterComponent={
+        loading && hasMore ? (
+          <View style={styles.loadingMoreContainer}>
+            <LottieView
+              source={require('../../assets/animations/loading.json')}
+              autoPlay loop style={{ width: 60, height: 60 }}
+            />
+            <Text style={styles.loadingText}>Đang tải thêm...</Text>
+          </View>
+        ) : null
+      }
       ListEmptyComponent={
         !loading && !refreshing ? (
-          <View style={{ alignItems:'center', justifyContent:'center', flex:1 }}>
-            <Feather name="home" size={40} color={PRIMARY} />
-            <Text style={{ marginTop:8, fontWeight:'700', color:TEXT }}>Chưa có phòng nào</Text>
-            <Text style={{ color:MUTED, marginTop:4 }}>Nhấn nút + để thêm phòng trọ đầu tiên</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyPrimary}>Không tìm thấy bài đăng trọ nào!</Text>
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }
-      ListFooterComponent={
-        loading && hasMore && rooms.length > 0 ? (
-          <View style={{ paddingVertical: 14, alignItems:'center' }}>
-            <LottieView source={require('../../assets/animations/loading.json')} autoPlay loop style={{ width:56, height:56 }} />
-            <Text style={{ color:MUTED, marginTop:6 }}>Đang tải thêm...</Text>
-          </View>
-        ) : null
-      }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
     />
   );
-}
+};
 
-/* ---------------- Placeholder (Tenants) ---------------- */
-function Placeholder({ icon, title, desc, primaryText, onPrimary }) {
-  return (
-    <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:16 }}>
-      <View style={styles.emptyIcon}>
-        <Feather name={icon} size={42} color={PRIMARY} />
+/* --------------- TAB: Bài thảo luận (có refresh) --------------- */
+const DiscussionsTab = ({ profileUserId }) => {
+  const navigation = useNavigation();
+
+
+
+
+
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchDiscussions = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const data = await getAllPosts(page, profileUserId); // giữ nguyên signature của bạn
+
+      if (Array.isArray(data?.content)) {
+        setItems(prev => [...prev, ...data.content]);
+        setPage(prev => prev + 1);
+        setHasMore(!data.last);
+        setError('');
+      } else {
+        setHasMore(false);
+        if (page === 0) setItems([]);
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra.';
+      if (msg.includes('Không có bài thảo luận')) {
+        setHasMore(false);
+        if (page === 0) setItems([]);
+        setError('');
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore, page, profileUserId]);
+
+  // REFRESH
+  const onRefresh = useCallback(async () => {
+    if (loading) return;
+    setRefreshing(true);
+    try {
+      const data = await getAllPosts(0, profileUserId);
+      const content = Array.isArray(data?.content) ? data.content : [];
+      setItems(content);
+      setPage(1);
+      setHasMore(!data?.last);
+      setError('');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra.';
+      setError(msg.includes('Không có bài thảo luận') ? '' : msg);
+      setItems([]);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loading, profileUserId]);
+
+  useEffect(() => {
+    fetchDiscussions();
+  }, [fetchDiscussions]);
+
+  const renderDiscussion = ({ item }) => (
+    <TouchableOpacity
+      style={styles.postCardBox}
+      onPress={() => navigation.navigate('DiscussionPost', { post: item })}
+      activeOpacity={0.9}
+    >
+      <Text numberOfLines={2} style={styles.postTitle}>{item.title}</Text>
+
+      <View style={styles.userInfoContainer}>
+        <Image
+          source={{ uri: item.user?.avatar || 'https://i.pravatar.cc/100?img=12' }}
+          style={styles.avatarDiscussion}
+        />
+        <View style={styles.userTextContainer}>
+          <Text style={styles.username}>{item.user?.username || 'Ẩn danh'}</Text>
+          <Text style={styles.postTime}>{moment(item.createdAt).fromNow()}</Text>
+        </View>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Thảo luận</Text>
+        </View>
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {!!desc && <Text style={styles.emptyDesc}>{desc}</Text>}
-      {!!primaryText && (
-        <TouchableOpacity style={styles.primaryBtn} onPress={onPrimary}>
-          <Feather name="plus" size={18} color="#fff" />
-          <Text style={styles.primaryBtnText}>{primaryText}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+
+      <Text numberOfLines={3} style={styles.postDescription}>{item.description}</Text>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.metaRow}>
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6B7280" />
+          <Text style={styles.metaText}>Xem chi tiết</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+      </View>
+    </TouchableOpacity>
   );
-}
 
-/* ---------------- styles ---------------- */
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(item, idx) => String(item.id ?? idx)}
+      renderItem={renderDiscussion}
+      onEndReached={() => { if (!loading && hasMore) fetchDiscussions(); }}
+      onEndReachedThreshold={0.3}
+      ListHeaderComponent={<Text style={styles.tabTitle}>Bài thảo luận</Text>}
+      ListFooterComponent={
+        loading && hasMore ? (
+          <View style={styles.loadingMoreContainer}>
+            <LottieView
+              source={require('../../assets/animations/loading.json')}
+              autoPlay loop style={{ width: 60, height: 60 }}
+            />
+            <Text style={styles.loadingText}>Đang tải thêm...</Text>
+          </View>
+        ) : null
+      }
+      ListEmptyComponent={
+        !loading && !refreshing ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyPrimary}>Chưa có bài thảo luận nào!</Text>
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+          </View>
+        ) : null
+      }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+    />
+  );
+};
+
+/* -------------------- Screen chính -------------------- */
+const UserProfileScreen = () => {
+  const { profileUser } = useRoute().params;
+  const navigation = useNavigation();
+  const { user } = useContext(AuthContext);
+
+  const isCurrentUser = user?.id === profileUser.id;
+
+  const handleMessage = () => {
+    if (isCurrentUser) return;
+    navigation.navigate('Chat', { sender: user, receiver: profileUser });
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+
+      <HeaderBlock
+        profileUser={profileUser}
+        isCurrentUser={isCurrentUser}
+        onMessage={handleMessage}
+      />
+
+
+      <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+        <Tab.Navigator
+          screenOptions={{
+            tabBarIndicatorStyle: { backgroundColor: '#4F46E5', height: 3, borderRadius: 2 },
+            tabBarActiveTintColor: '#111827',
+            tabBarInactiveTintColor: '#6B7280',
+            tabBarLabelStyle: { fontWeight: '700', textTransform: 'none' },
+            tabBarStyle: { backgroundColor: '#fff' },
+            lazy: true,
+          }}
+        >
+          <Tab.Screen
+            name="PostsTab"
+            options={{ title: 'Bài đăng' }}
+            children={() => <PostsTab profileUserId={profileUser.id} />}
+          />
+          <Tab.Screen
+            name="DiscussionsTab"
+            options={{ title: 'Bài thảo luận' }}
+            children={() => <DiscussionsTab profileUserId={profileUser.id} />}
+          />
+        </Tab.Navigator>
+      </View>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
+
+  /* Header */
   header: {
-    paddingHorizontal:16, paddingTop:8, paddingBottom:12,
-    flexDirection:'row', alignItems:'center',
-    backgroundColor:'#fff', borderBottomWidth:1, borderBottomColor:BORDER,
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingBottom: 20,
+    backgroundColor: '#fff',
   },
-  headerTitle: { fontSize:18, fontWeight:'800', color:TEXT },
-  headerSub:   { marginTop:4, color:MUTED, fontSize:12 },
-  headerAction: {
-    width:36, height:36, borderRadius:10, borderWidth:1, borderColor:BORDER,
-    alignItems:'center', justifyContent:'center', marginLeft:10, backgroundColor:'#fff'
+  curvedBackground: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 150,
+    backgroundColor: '#4F46E5',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  avatar: {
+    width: 100, height: 100, borderRadius: 50,
+    borderWidth: 3, borderColor: '#fff',
+    marginBottom: 8,
+  },
+  name: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  infoText: { marginLeft: 6, color: '#6B7280', fontSize: 14 },
+
+  /* Tab common */
+  tabTitle: {
+    fontSize: 18, fontWeight: '700',
+    color: '#4F46E5',
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 16,
+  },
+  emptyContainer: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyPrimary: {
+    color: '#6B7280', fontSize: 15, fontStyle: 'italic',
+    textAlign: 'center', paddingHorizontal: 16,
+  },
+  errorText: {
+    marginTop: 6, color: '#EF4444', textAlign: 'center',
+    paddingHorizontal: 16,
   },
 
-  menuWrap: { paddingHorizontal:12, paddingVertical:8, gap:8 },
-  menuItem: {
-    paddingHorizontal:12, height:36, borderRadius:999, borderWidth:1, borderColor:BORDER,
-    backgroundColor:'#fff', flexDirection:'row', alignItems:'center', marginRight:8
+  /* Card (dùng chung cho 2 tab) */
+  postCardBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginHorizontal: 14,
+    marginBottom: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EEF1F6',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  menuItemActive: { backgroundColor:PRIMARY, borderColor:PRIMARY },
-  menuText: { color:TEXT, fontWeight:'700' },
-  menuTextActive: { color:'#fff' },
-
-  card: {
-    flexDirection:'row', padding:12, marginTop:12,
-    borderRadius:16, backgroundColor:'#fff',
-    borderWidth:1, borderColor:BORDER,
-    shadowColor:'#0F172A', shadowOpacity:0.06, shadowRadius:10, shadowOffset:{width:0, height:4}, elevation:2,
+  postImage: {
+    width: '100%', height: 220,
+    borderRadius: 8, marginBottom: 12, resizeMode: 'cover',
   },
-  leftCol: { width:96, marginRight:12 },
-  image: { width:'100%', aspectRatio:1, borderRadius:12, backgroundColor:'#EDF2F7' },
-  imagePlaceholder: { width:'100%', aspectRatio:1, borderRadius:12, backgroundColor:'#EDF2F7', alignItems:'center', justifyContent:'center' },
+  postContent: { padding: 10 },
+  postTitle: { fontSize: 17, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 22 },
+  postAddress: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  postPrice: { color: '#EF4444', fontWeight: 'bold', marginTop: 4 },
+  postDescription: { fontSize: 14, color: '#374151', marginTop: 2, marginBottom: 8, lineHeight: 20 },
 
-  rightCol: { flex:1 },
-  title: { fontSize:15, fontWeight:'700', color:TEXT },
-  subText: { marginTop:2, color:MUTED, fontSize:12 },
-  price: { marginTop:6, color:PRIMARY, fontWeight:'700', fontSize:14 },
-
-  tagRow: { flexDirection:'row', flexWrap:'wrap', gap:6, marginTop:6 },
-  tag: { paddingHorizontal:8, paddingVertical:3, backgroundColor:'#F1F5F9', borderRadius:999 },
-  tagText: { fontSize:11, color:'#0F172A', fontWeight:'600' },
-
-  actionsRow: { marginTop:10, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
-  leftActions: { flexDirection:'row', alignItems:'center' },
-  pillBtn: { height:32, paddingHorizontal:10, borderRadius:8, backgroundColor:'#F1F5F9', flexDirection:'row', alignItems:'center', marginRight:8 },
-  pillBtnText: { color:TEXT, fontWeight:'600', marginRight:4, fontSize:13 },
-  ghostBtn: { height:32, paddingHorizontal:10, borderRadius:8, flexDirection:'row', alignItems:'center' },
-  ghostBtnText: { color:TEXT, fontWeight:'600', marginLeft:4 },
-
-  rightActions: { flexDirection:'row', alignItems:'center' },
-  iconBtn: { width:32, height:32, borderRadius:8, backgroundColor:'#EFF2F6', alignItems:'center', justifyContent:'center', marginLeft:6 },
-  iconBtnDanger: { backgroundColor:'#FFE4E6' },
-
-  emptyIcon: { width:90, height:90, borderRadius:999, backgroundColor:'#DBEAFE', alignItems:'center', justifyContent:'center', marginBottom:12 },
-  emptyTitle: { fontSize:16, fontWeight:'700', color:TEXT, marginBottom:6, textAlign:'center' },
-  emptyDesc: { color:MUTED, textAlign:'center', marginBottom:12 },
-
-  primaryBtn: { height:42, paddingHorizontal:16, borderRadius:12, backgroundColor:PRIMARY, flexDirection:'row', alignItems:'center' },
-  primaryBtnText: { color:'#fff', fontWeight:'700', marginLeft:8 },
-
-  fab: {
-    position:'absolute', right:16, bottom:24, width:56, height:56, borderRadius:28,
-    backgroundColor:PRIMARY, alignItems:'center', justifyContent:'center',
-    shadowColor:'#000', shadowOpacity:0.2, shadowRadius:12, shadowOffset:{width:0, height:6}, elevation:6
+  userInfoContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
+  avatarDiscussion: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#E5E7EB', borderWidth: 1, borderColor: '#EEF1F6',
   },
+  userTextContainer: { flex: 1 },
+  username: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  postTime: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+
+  badge: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: '#F1F5FF', borderRadius: 12,
+    borderWidth: 1, borderColor: '#DCE6FF',
+  },
+  badgeText: { fontSize: 12, color: '#3B5BDB', fontWeight: '700' },
+
+  cardFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EEF1F6',
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', columnGap: 6 },
+  metaText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+
+  /* Loading more */
+  loadingMoreContainer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: { marginLeft: 10, fontSize: 14, color: '#6B7280' },
+
+  /* Button nhắn tin */
+  messageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 16,
+  },
+  messageText: { color: '#fff', fontSize: 14, marginLeft: 8, fontWeight: '600' },
 });
+
+export default UserProfileScreen;
