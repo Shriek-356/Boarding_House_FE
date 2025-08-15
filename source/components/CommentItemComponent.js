@@ -1,46 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
 import moment from 'moment';
-import { useContext } from 'react';
-import { AuthContext } from '../contexts/AuthContext';
-import { getToken } from '../api/axiosClient';
-import { addPostCommentResponse } from '../api/postCommentApi';
 const CommentItemComponent = ({ comment, level = 0, onReplySubmit, postId }) => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const { user } = useContext(AuthContext);
-  const [token, setToken] = useState(null);
-
-  useEffect(() => {
-    const loadToken = async () => {
-      const token = await getToken();
-      setToken(token);
-    };
-    loadToken();
-  }, []);
 
   const handleReply = async () => {
     if (!replyText.trim()) return;
     try {
-      const replyData = {
-        postId: postId, // hoặc truyền vào qua props
-        content: replyText,
-        parentCommentId: comment.id,
-      };
-      console.log(replyData);
-      const response = await addPostCommentResponse(replyData, token);
-      console.log(response);
-      const reply = {
-        id: response.id, // fake ID
-        content: replyText,
-        createdAt: new Date().toISOString(),
-        user: {
-          username: 'Bạn', // giả định người dùng hiện tạiasdasd
-          avatar: user.avatar,
-        },
-        replies: [],
-      };
-      onReplySubmit(comment.id, reply);
+      await onReplySubmit?.(comment.id, replyText);//Goi api o cha de linh hoat tai su dung giua boardinggzone va post
       setReplyText('');
       setShowReplyInput(false);
     } catch (err) {

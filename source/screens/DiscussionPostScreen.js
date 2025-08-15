@@ -18,6 +18,7 @@ import CommentItemComponent from '../components/CommentItemComponent';
 import { getPostComments, addPostComment } from '../api/postCommentApi';
 import { AuthContext } from '../contexts/AuthContext';
 import { getToken } from '../api/axiosClient';
+import { addPostCommentResponse } from '../api/postCommentApi';
 
 moment.locale('vi');
 
@@ -74,6 +75,21 @@ const DiscussionPostScreen = () => {
     } catch (e) {
       console.log(e);
     }
+  };
+
+  const onReplySubmit = async (parentId, replyText) => {
+    const res = await addPostCommentResponse(
+      { postId: post.id, content: replyText, parentCommentId: parentId },
+      token
+    );
+    const reply = {
+      id: res.id,
+      content: res.content,
+      createdAt: res.createdAt,
+      user: { username: 'Bạn', avatar: user?.avatar },
+      replies: [],
+    };
+    handleReplySubmit(parentId, reply); // chèn vào cây
   };
 
   const HeaderCard = () => (
@@ -135,7 +151,7 @@ const DiscussionPostScreen = () => {
         renderItem={({ item }) => (
           <CommentItemComponent
             comment={item}
-            onReplySubmit={handleReplySubmit}
+            onReplySubmit={onReplySubmit}
             postId={post.id}
           />
         )}

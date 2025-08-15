@@ -14,6 +14,8 @@ import { getAllBoardingZonesByLandlord } from '../api/boardingZoneApi';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { deleteBoardingZone } from '../api/boardingZoneApi';
+import { getToken, saveToken } from '../api/axiosClient';
 const HeaderBar = ({ onAdd }) => (
     <View style={styles.headerBar}>
         <Text style={styles.headerTitle}>Dãy trọ / Toà nhà</Text>
@@ -35,6 +37,7 @@ const BoardingZoneManagerScreen = () => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
+    const [token, setToken] = useState(null);
 
     // ====== FETCH (giữ logic của bạn) ======
     const fetchUserPosts = useCallback(async () => {
@@ -93,10 +96,17 @@ const BoardingZoneManagerScreen = () => {
         }
     }, [loading, profileUserId]);
 
+    const fetchToken = async () => {
+        const token = await getToken();
+        setToken(token);
+        return token;
+    }
+
     useEffect(() => {
         if (!profileUserId) return;
         setPosts([]); setPage(0); setHasMore(true); setError('');
         fetchUserPosts();
+        fetchToken();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [profileUserId]);
 
@@ -122,7 +132,7 @@ const BoardingZoneManagerScreen = () => {
                 style: 'destructive',
                 onPress: async () => {
                     try {
-                        // await deleteZone(id); // nếu có API
+                        await deleteBoardingZone(id, token);
                         setPosts(prev => prev.filter(p => p.id !== id));
                     } catch {
                         Alert.alert('Lỗi', 'Không xoá được dãy trọ');
