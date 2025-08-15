@@ -11,6 +11,7 @@ import { getAllPosts } from '../api/postApi';
 import { getAllBoardingZonesByLandlord } from '../api/boardingZoneApi';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
+import { getFollowStatus, followLandlord, unfollowLandlord } from '../api/followApi';
 
 import { AuthContext } from '../contexts/AuthContext';
 
@@ -20,16 +21,89 @@ const Tab = createMaterialTopTabNavigator();
 const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
   const formattedDate = new Date(profileUser.createdAt).toLocaleDateString('vi-VN');
 
+  const [following, setFollowing] = useState(false);
+  const [followers, setFollowers] = useState(0);
+  const [loadingFollow, setLoadingFollow] = useState(false);
+
+  const loadStatus = useCallback(async () => {
+    try {
+      if (!isCurrentUser) {
+        const data = await getFollowStatus(profileUser.id);
+        setFollowing(!!data.following);
+        setFollowers(Number(data.followers || 0));
+      }
+    } catch (_) { }
+  }, [isCurrentUser, profileUser?.id]);
+
+  useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const toggleFollow = async () => {
+    if (loadingFollow || isCurrentUser) return;
+    setLoadingFollow(true);
+    const prevFollowing = following;
+    const prevCount = followers;
+
+    // Optimistic UI
+    setFollowing(!prevFollowing);
+    setFollowers(prev => prev + (prevFollowing ? -1 : 1));
+
+    try {
+      if (!prevFollowing) {
+        const res = await followLandlord(profileUser.id);
+        setFollowing(res.following);
+        setFollowers(Number(res.followers));
+      } else {
+        const res = await unfollowLandlord(profileUser.id);
+        setFollowing(res.following);
+        setFollowers(Number(res.followers));
+      }
+    } catch (e) {
+      // rollback nếu lỗi
+      setFollowing(prevFollowing);
+      setFollowers(prevCount);
+    } finally {
+      setLoadingFollow(false);
+    }
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.curvedBackground} />
       <Image source={{ uri: profileUser.avatar }} style={styles.avatar} />
 
       {!isCurrentUser && (
-        <TouchableOpacity style={styles.messageButton} onPress={onMessage}>
-          <FeatherIcon name="message-circle" size={18} color="#fff" />
-          <Text style={styles.messageText}>Nhắn tin</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+          {/* Nút nhắn tin */}
+          <TouchableOpacity style={styles.messageButton} onPress={onMessage} activeOpacity={0.8}>
+            <FeatherIcon name="message-circle" size={16} color="#fff" />
+            <Text style={styles.messageText}>Nhắn tin</Text>
+          </TouchableOpacity>
+
+          {/* Nút follow */}
+          <TouchableOpacity
+            onPress={toggleFollow}
+            style={[
+              styles.followButton,
+              following ? styles.followingBtn : styles.followBtn
+            ]}
+            activeOpacity={0.8}
+            disabled={loadingFollow}
+          >
+            <FeatherIcon
+              name={following ? 'check' : 'user-plus'}
+              size={14}
+              color={following ? '#111827' : '#fff'}
+            />
+            <Text
+              style={[
+                styles.followText,
+                following ? { color: '#111827' } : { color: '#fff' }
+              ]}
+            >
+              {following ? 'Đang theo dõi' : 'Theo dõi'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <Text style={styles.name}>{profileUser.firstname} {profileUser.lastname}</Text>
@@ -42,6 +116,13 @@ const HeaderBlock = ({ profileUser, isCurrentUser, onMessage }) => {
         <FeatherIcon name="calendar" size={16} color="#6B7280" />
         <Text style={styles.infoText}>Tham gia: {formattedDate}</Text>
       </View>
+
+      {!isCurrentUser && (
+        <View style={[styles.infoRow, { marginTop: 8 }]}>
+          <FeatherIcon name="users" size={16} color="#6B7280" />
+          <Text style={styles.infoText}>{followers.toLocaleString('vi-VN')} người theo dõi</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -168,11 +249,6 @@ const PostsTab = ({ profileUserId }) => {
 /* --------------- TAB: Bài thảo luận (có refresh) --------------- */
 const DiscussionsTab = ({ profileUserId }) => {
   const navigation = useNavigation();
-
-
-
-
-
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -232,7 +308,7 @@ const DiscussionsTab = ({ profileUserId }) => {
 
   useEffect(() => {
     fetchDiscussions();
-  }, [fetchDiscussions]);
+  }, []);
 
   const renderDiscussion = ({ item }) => (
     <TouchableOpacity
@@ -291,7 +367,6 @@ const DiscussionsTab = ({ profileUserId }) => {
         !loading && !refreshing ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyPrimary}>Chưa có bài thảo luận nào!</Text>
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         ) : null
       }
@@ -461,12 +536,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4F46E5',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  messageText: { color: '#fff', fontSize: 14, marginLeft: 8, fontWeight: '600' },
+  messageText: { color: '#fff', fontSize: 13, marginLeft: 6, fontWeight: '600' },
+  followButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  followBtn: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  followingBtn: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#D1D5DB',
+  },
+  followText: {
+    marginLeft: 6,
+    fontWeight: '600',
+    fontSize: 13,
+  },
 });
 
 export default UserProfileScreen;
