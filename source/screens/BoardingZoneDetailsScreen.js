@@ -1,41 +1,27 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-    View,
-    Text,
-    ScrollView,
-    StyleSheet,
-    Image,
-    Dimensions,
-    TouchableOpacity,
-    Share,
-    Linking,
-    FlatList,
-    Platform,
-    StatusBar,
-    SafeAreaView
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, Dimensions, TextInput, TouchableOpacity, Share, Linking, FlatList, Platform, StatusBar, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MapView, { Marker } from 'react-native-maps';
 import { ActivityIndicator } from 'react-native-paper';
-import {
-    getBoardingZoneById,
-    getBoardingZoneAmenities,
-    getBoardingZoneTarget,
-    getBoardingZoneEnvironment
-} from '../api/boardingZoneApi';
+import { getBoardingZoneById, getBoardingZoneAmenities, getBoardingZoneTarget, getBoardingZoneEnvironment } from '../api/boardingZoneApi';
 import { getRoomsOfBoardingZone } from '../api/roomApi';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import RoomDetailsModal from '../modals/RoomDetailsModal';
-
+import { addZoneComment, addZoneCommentResponse, getBoardingZoneComments } from '../api/boardingZoneComment';
+import { getToken } from '../api/axiosClient';
+import { AuthContext } from '../contexts/AuthContext';
+import { useContext } from 'react';
+import CommentItemComponent from '../components/CommentItemComponent';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const MAX_REQUESTS_PER_MINUTE = 50;
 
 const BoardingDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const { id } = route.params;
+    const { id } = route.params;//id cua boardingZone
 
     const [room, setRoom] = useState(null);
     const [boardingHouse, setBoardingHouse] = useState([]);
@@ -45,6 +31,14 @@ const BoardingDetailScreen = () => {
     const [error, setError] = useState(null);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
+
+    const { user } = useContext(AuthContext);
+    const [token, setToken] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [newCommentText, setNewCommentText] = useState('');
+
+    const insets = useSafeAreaInsets();
+    const BOTTOM_BAR_HEIGHT = 64;
 
     // Memoized address for coordinates fetching
     const fullAddress = useMemo(() => {
@@ -120,6 +114,70 @@ const BoardingDetailScreen = () => {
     useEffect(() => {
         fetchBoardingZoneData();
     }, [fetchBoardingZoneData]);
+
+    //Load token va comment
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const t = await getToken();
+                setToken(t);
+            } catch { }
+            try {
+                console.log("id", id)
+                const cmts = await getBoardingZoneComments(id);
+                setComments(cmts || []);
+            } catch (e) {
+                console.log('Load BZ comments error:', e);
+                setComments([]);
+            }
+        };
+        load();
+    }, [id]);
+
+    //Xu ly comment
+    const insertReplyToTree = (parentId, replyNode, nodes) =>
+        nodes.map(n => {
+            if (n.id === parentId) return { ...n, replies: [...(n.replies || []), replyNode] };
+            if (n.replies?.length) return { ...n, replies: insertReplyToTree(parentId, replyNode, n.replies) };
+            return n;
+        });
+
+    const handleReplySubmit = (parentId, replyNode) => {
+        setComments(prev => insertReplyToTree(parentId, replyNode, prev));
+    };
+
+    const handleAddComment = async () => {
+        const text = newCommentText.trim();
+        if (!text) return;
+        try {
+            const res = await addZoneComment(token,{ boardingZoneId: id, content: text });
+            const newCmt = {
+                id: res.id,
+                content: res.content,
+                createdAt: res.createdAt,
+                user: { username: user?.username || 'Bạn', avatar: user?.avatar },
+                replies: [],
+            };
+            setComments(prev => [newCmt, ...(prev || [])]);
+            setNewCommentText('');
+        } catch (e) {
+            console.log('Add BZ comment error:', e);
+        }
+    };
+
+    const onReplySubmit = async (parentId, replyText) => {
+        const res = await addZoneCommentResponse(token,
+            { boardingZoneId: id, content: replyText, parentId: parentId },
+        );
+        const reply = {
+            id: res.id,
+            content: res.content,
+            createdAt: res.createdAt,
+            user: { username: user?.username || 'Bạn', avatar: user?.avatar },
+            replies: [],
+        };
+        handleReplySubmit(parentId, reply);
+    };
 
     useEffect(() => {
         if (fullAddress) {
@@ -231,7 +289,8 @@ const BoardingDetailScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.container}>
+            <ScrollView style={styles.container}
+                contentContainerStyle={{ paddingBottom: insets.bottom + BOTTOM_BAR_HEIGHT + 24 }}>
                 <View style={styles.imageContainer}>
                     <Image
                         source={{ uri: images[activeImageIndex] }}
@@ -410,7 +469,39 @@ const BoardingDetailScreen = () => {
                         </>
                     )}
                 </View>
+
+                <View style={styles.divider} />
+                <Text style={styles.sectionTitle}>Bình luận</Text>
+
+                <FlatList
+                    data={comments}
+                    keyExtractor={(item) => String(item.id)}
+                    renderItem={({ item }) => (
+                        <CommentItemComponent
+                            comment={item}
+                            onReplySubmit={onReplySubmit}
+                            postId={id}
+                        />
+                    )}
+                    ListFooterComponent={
+                        <View style={styles.footerInput}>
+                            <TextInput
+                                value={newCommentText}
+                                onChangeText={setNewCommentText}
+                                placeholder="Nhập bình luận..."
+                                placeholderTextColor="#9CA3AF"
+                                style={styles.input}
+                            />
+                            <TouchableOpacity onPress={handleAddComment} style={styles.sendBtn} activeOpacity={0.9}>
+                                <Text style={styles.sendText}>Gửi</Text>
+                            </TouchableOpacity>
+                        </View>
+                    }
+                    scrollEnabled={false}
+                />
             </ScrollView>
+
+
 
             <View style={styles.bottomContainer}>
                 <TouchableOpacity
@@ -774,7 +865,37 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         textAlign: 'center'
-    }
+    },
+    footerInput: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 18,
+        paddingBottom: 40,
+    },
+    input: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 22,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        backgroundColor: '#FFFFFF',
+        color: '#111827',
+    },
+    sendBtn: {
+        backgroundColor: '#6C5CE7',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 22,
+        marginLeft: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 1 },
+        elevation: 2,
+    },
+    sendText: { color: '#fff', fontWeight: '700' },
+
 });
 
 export default BoardingDetailScreen;
