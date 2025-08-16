@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "85708727389",
+    "project_id": "bdhchat-f9a7d",
+    "storage_bucket": "bdhchat-f9a7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85708727389:android:e2653dfa145714ad4399b4",
+        "android_client_info": {
+          "package_name": "com.vdk.boardinghouse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqLQAqaBZ8EAO-btS5XNLeXcwsf5VbZHU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
