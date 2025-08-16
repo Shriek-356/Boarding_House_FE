@@ -7,10 +7,32 @@ import ChatRoomListScreen from '../screens/ChatRoomListScreen';
 import { ChatContext } from '../contexts/ChatContext';
 import { useContext } from 'react';
 import DiscussionListScreen from '../screens/DiscussionListScreen';
+import NotificationsScreen from '../screens/NotificationScreen';
+import { useState } from 'react';
+import { useEffect } from 'react';
 const Tab = createBottomTabNavigator();
+import { listNotifications } from '../api/notificationApi';
 
 export default function MainTabNavigator() {
-  const { totalUnread } = useContext(ChatContext); // Lấy tổng số tin nhắn chưa đọc từ context
+  // Lấy số thông báo chưa đọc từ backend
+  const { totalUnread } = useContext(ChatContext);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await listNotifications(0, 20);
+        // Lọc thông báo chưa đọc (seenAt == null)
+        if(!res){setUnreadNotifications(0); return}
+        const unreadCount = res.data.content.filter(n => !n.seenAt).length;
+        setUnreadNotifications(unreadCount);
+      } catch (err) {
+        console.error("Lỗi lấy thông báo:", err);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -51,6 +73,20 @@ export default function MainTabNavigator() {
           tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
         }}
       />
+
+      {/* Tab thông báo */}
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="bell-outline" color={color} size={size} />
+          ),
+          tabBarBadge: unreadNotifications > 0 ? unreadNotifications : undefined,
+        }}
+      />
+      
       <Tab.Screen
         name="Account"
         component={AccountScreen}

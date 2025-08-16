@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, Dimensions, TextInput, TouchableOpacity, Share, Linking, FlatList, Platform, StatusBar, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, Dimensions, TextInput, TouchableOpacity, Share, FlatList,Linking, Platform, StatusBar, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import MapView, { Marker } from 'react-native-maps';
 import { ActivityIndicator } from 'react-native-paper';
 import { getBoardingZoneById, getBoardingZoneAmenities, getBoardingZoneTarget, getBoardingZoneEnvironment } from '../api/boardingZoneApi';
 import { getRoomsOfBoardingZone } from '../api/roomApi';
@@ -16,6 +15,7 @@ import { useContext } from 'react';
 import CommentItemComponent from '../components/CommentItemComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
+import { Pressable, PixelRatio } from 'react-native';
 const MAX_REQUESTS_PER_MINUTE = 50;
 
 const BoardingDetailScreen = () => {
@@ -150,7 +150,7 @@ const BoardingDetailScreen = () => {
         const text = newCommentText.trim();
         if (!text) return;
         try {
-            const res = await addZoneComment(token,{ boardingZoneId: id, content: text });
+            const res = await addZoneComment(token, { boardingZoneId: id, content: text });
             const newCmt = {
                 id: res.id,
                 content: res.content,
@@ -272,6 +272,8 @@ const BoardingDetailScreen = () => {
     if (!room) {
         return null;
     }
+
+    const LIQ_TOKEN = 'pk.813257b3e503fd44f49d3c6b13648a38'
 
     const images = room.images?.length > 0 ? room.images : ['https://i.imgur.com/JZw1g0a.jpg'];
 
@@ -446,25 +448,35 @@ const BoardingDetailScreen = () => {
                         <>
                             <Text style={styles.sectionTitle}>Vị trí</Text>
                             <View style={styles.mapContainer}>
-                                <MapView
-                                    style={styles.map}
-                                    initialRegion={{
-                                        latitude: room.latitude,
-                                        longitude: room.longitude,
-                                        latitudeDelta: 0.005,
-                                        longitudeDelta: 0.005,
-                                    }}
-                                    scrollEnabled={false}
-                                >
-                                    <Marker coordinate={{
-                                        latitude: room.latitude,
-                                        longitude: room.longitude
-                                    }}>
-                                        <View style={styles.marker}>
-                                            <Icon name="home" size={24} color="#6C5CE7" />
-                                        </View>
-                                    </Marker>
-                                </MapView>
+                                {(() => {
+                                    const dpr = Math.min(PixelRatio.get(), 2);               // ảnh nét vừa đủ
+                                    const targetH = 250;                                     // cùng chiều cao với style
+                                    const targetW = Math.round(width - 30);                  // trừ padding 2 bên nếu có
+                                    const w = Math.min(Math.round(targetW * dpr), 1024);     // tránh vượt limit
+                                    const h = Math.min(Math.round(targetH * dpr), 1024);
+
+                                    const lat = room.latitude;
+                                    const lng = room.longitude;
+                                    const url = `https://maps.locationiq.com/v3/staticmap` +
+                                        `?key=${LIQ_TOKEN}` +
+                                        `&center=${lat},${lng}` +
+                                        `&zoom=15&size=${w}x${h}` +
+                                        `&markers=icon:large-blue-cutout|${lat},${lng}`;
+
+                                    // Bấm vào ảnh -> mở OSM ngoài app (không dùng Google)
+                                    const openExternal = () =>
+                                        Linking.openURL(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`);
+
+                                    return (
+                                        <Pressable onPress={openExternal} android_ripple={{ color: '#eee' }}>
+                                            <Image
+                                                source={{ uri: url }}
+                                                style={{ width: '100%', height: targetH, borderRadius: 12, backgroundColor: '#eee' }}
+                                                resizeMode="cover"
+                                            />
+                                        </Pressable>
+                                    );
+                                })()}
                             </View>
                         </>
                     )}
