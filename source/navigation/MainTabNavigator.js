@@ -26,7 +26,6 @@ export default function MainTabNavigator() {
         const unreadCount = res.data.content.filter(n => !n.seenAt).length;
         setUnreadNotifications(unreadCount);
       } catch (err) {
-        console.error("Lỗi lấy thông báo:", err);
       }
     };
 
