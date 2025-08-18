@@ -1,8 +1,8 @@
 import { axiosDAuthApiInstance, axiosInstance } from "./axiosClient";
 
 const endpoint = {
-    getUser:'/user',
-    registerUser:'/register'
+    getUser: '/user',
+    registerUser: '/register'
 }
 
 export const getUserProfile = async (Token) => {
@@ -17,7 +17,11 @@ export const getUserProfile = async (Token) => {
 
 export const registerUser = async (userData) => {
     try {
-        const response = await axiosInstance.post(endpoint.registerUser, userData);
+        const response = await axiosInstance.post(endpoint.registerUser, userData, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            },
+        });
         return response.data;
     } catch (error) {
         throw error;

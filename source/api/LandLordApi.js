@@ -11,7 +11,7 @@ export const addLandlordRequest = async (formData, token) => {
             formData,
             {
                 headers: {
-                    "Content-Type": "multipart/form-data", // ⚠️ Bắt buộc
+                    "Content-Type": "multipart/form-data", //Bắt buộc
                     "Authorization": `Bearer ${token}`,
                 },
             }

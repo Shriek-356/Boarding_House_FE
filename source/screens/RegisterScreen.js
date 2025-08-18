@@ -3,6 +3,7 @@
     import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
     import { SafeAreaView } from 'react-native';
     import { registerUser } from '../api/userApi';
+    import Toast from 'react-native-toast-message';
     export default function RegisterScreen({ navigation }) {
         const [form, setForm] = useState({
             username: '',
@@ -32,32 +33,36 @@
             setSubmitting(true);
             try {
                 // Backend đang nhận @RequestParam Map<String,String> => dùng URLSearchParams
-                const body = new URLSearchParams();
-                body.append('username', form.username.trim());
-                body.append('password', form.password);
-                body.append('email', form.email.trim());
-                body.append('phone', form.phone.trim());
-                body.append('firstName', form.firstName.trim());
-                body.append('lastName', form.lastName.trim());
-                body.append('address', form.address.trim());
-                body.append('role', form.role);
+                const formData = new FormData();
+                formData.append('username', form.username.trim());
+                formData.append('password', form.password);
+                formData.append('email', form.email.trim());
+                formData.append('phone', form.phone.trim());
+                formData.append('firstName', form.firstName.trim());
+                formData.append('lastName', form.lastName.trim());
+                formData.append('address', form.address.trim());
+                formData.append('role', form.role);
+                console.log(formData)
+                await registerUser(formData);
 
-                await registerUser(body);
-
-                Alert.alert('Thành công', 'Tạo tài khoản thành công! Hãy đăng nhập.', [
-                    { text: 'OK', onPress: () => navigation?.goBack?.() },
-                ]);
+                Toast.show({
+                    type: 'success',
+                    text1: 'Thành công',
+                    text2: 'Tạo tài khoản thành công! Hãy đăng nhập.',
+                });
+                navigation.navigate('Login');
             } catch (err) {
-                // cố gắng đọc message từ backend (ví dụ: "Email đã tồn tại", "Số điện thoại đã tồn tại")
-                const msg = err?.response?.data || err?.message || 'Đăng ký thất bại';
-                Alert.alert('Lỗi', String(msg));
+                Toast.show({
+                    type: 'error',
+                    text1: 'Lỗi',
+                    text2: String(err.response.data.error) || 'Đăng ký thất bại vui lòng thử lại sau!',
+                });
             } finally {
                 setSubmitting(false);
             }
         };
 
         return (
-            <SafeAreaView>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
                         <Text style={styles.header}>Tạo tài khoản</Text>
@@ -155,21 +160,6 @@
                             {!!errors.confirmPassword && <Text style={styles.helperError}>{errors.confirmPassword}</Text>}
                         </View>
 
-                        {/* Role selector */}
-                        <Text style={[styles.label, { marginBottom: 8 }]}>Vai trò</Text>
-                        <View style={styles.segment}>
-                            {['RENTER', 'LANDLORD'].map((r) => (
-                                <TouchableOpacity
-                                    key={r}
-                                    style={[styles.segmentItem, form.role === r && styles.segmentItemActive]}
-                                    onPress={() => onChange('role', r)}
-                                >
-                                    <Text style={[styles.segmentText, form.role === r && styles.segmentTextActive]}>
-                                        {r === 'RENTER' ? 'Người thuê' : 'Chủ trọ'}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
 
                         <TouchableOpacity style={[styles.button, hasError && { opacity: 0.8 }]} onPress={handleRegister} disabled={submitting}>
                             {submitting ? (
@@ -187,7 +177,6 @@
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
-            </SafeAreaView>
         );
     }
 
@@ -224,8 +213,6 @@
 
         if (!f.confirmPassword) e.confirmPassword = 'Vui lòng nhập lại mật khẩu';
         else if (f.confirmPassword !== f.password) e.confirmPassword = 'Mật khẩu không khớp';
-
-        if (!f.role) e.role = 'Vui lòng chọn vai trò';
 
         return e;
     }
