@@ -21,6 +21,7 @@ import CreateBoardingZoneScreen from '../screens/CreateBoardingZoneScreen';
 import ZoneManagementScreen from '../screens/ZoneManagementScreen';
 import EditRoomScreen from '../screens/EditRoomScreen';
 import EditBoardingZoneScreen from '../screens/EditBoardingZoneScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 export default function AppNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -43,6 +44,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ZoneManagement" component={ZoneManagementScreen} />
             <Stack.Screen name="EditRoom" component={EditRoomScreen} />
             <Stack.Screen name="EditBoardingZone" component={EditBoardingZoneScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         </ChatProvider>
