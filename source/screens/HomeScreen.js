@@ -6,142 +6,212 @@ import {
   TextInput,
   ImageBackground,
   FlatList,
-  ScrollView,
   Image,
+  SafeAreaView,
+  StatusBar,
+  TouchableOpacity,
 } from 'react-native';
-import { Button } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
+
 const mockPosts = [
-  {
-    id: '1',
-    title: 'Phòng trọ 25m2 có gác lửng',
-    price: '2.5 triệu/tháng',
-    location: 'Q.10, TP.HCM',
-    image: require('../../assets/images/logo.avif'),
-  },
-  {
-    id: '2',
-    title: 'Nhà nguyên căn 3 tầng',
-    price: '7 triệu/tháng',
-    location: 'Q.12, TP.HCM',
-    image: require('../../assets/images/logo.avif'),
-  },
+  { id: '1', title: 'Phòng trọ 25m2 có gác lửng', price: '2.5 triệu/tháng', location: 'Q.10, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '2', title: 'Nhà nguyên căn 3 tầng',     price: '7 triệu/tháng',   location: 'Q.12, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '3', title: 'Phòng mới tinh, full nội thất', price: '3.8 triệu/tháng', location: 'Q.7, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '4', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '5', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '6', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '7', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '8', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '9', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+
 ];
 
-const HomeScreen = () => {
+const COLORS = {
+  bg: '#F6F7FB',
+  card: '#FFFFFF',
+  text: '#0F172A',
+  sub: '#6B7280',
+  primary: '#1E88E5',
+  accent: '#FF6A3D',
+  price: '#EF4444',
+  stroke: '#E5E7EB',
+};
+
+const RADIUS = 14;
+
+export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
 
-  return (
-    <ScrollView style={styles.container}>
-      {/* Ảnh nền phía trên */}
-      <ImageBackground
-        source={require('../../assets/images/logo.avif')}
-        style={styles.banner}
-        imageStyle={{ borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}
-      >
-        <View style={styles.searchContainer}>
-          <TextInput
-            placeholder="Bạn muốn tìm trọ ở đâu?"
-            style={styles.searchInput}
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-          <Button mode="contained" style={styles.searchButton}>
-            Tìm kiếm
-          </Button>
-        </View>
-      </ImageBackground>
+  const renderItem = ({ item }) => (
+    <TouchableOpacity activeOpacity={0.85} style={styles.card}>
+      <View style={styles.thumbWrap}>
+        <Image source={item.image} style={styles.cardImage} />
+        <TouchableOpacity style={styles.bookmarkBtn}>
+          <Icon name="heart-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-      {/* Thanh lọc trọ */}
+      <Text numberOfLines={2} style={styles.cardTitle}>{item.title}</Text>
+      <Text style={styles.cardPrice}>{item.price}</Text>
+
+      <View style={styles.rowCenter}>
+        <Icon name="map-marker" size={16} color={COLORS.sub} />
+        <Text numberOfLines={1} style={styles.cardLocation}>{item.location}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
+      {/* Banner */}
+      <View style={styles.bannerWrap}>
+        <ImageBackground
+          source={require('../../assets/images/logo.avif')}
+          style={styles.banner}
+          imageStyle={styles.bannerImage}
+        >
+          {/* overlay KHÔNG chặn touch */}
+          <View style={styles.overlay} pointerEvents="none" />
+          <Text style={styles.headline}>Tìm trọ dễ • nhanh • chuẩn</Text>
+
+          {/* Floating Search */}
+          <View style={styles.searchBox}>
+            <Icon name="magnify" size={20} color={COLORS.sub} />
+            <TextInput
+              placeholder="Bạn muốn tìm trọ ở đâu?"
+              placeholderTextColor="#9CA3AF"
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={setSearchText}
+              returnKeyType="search"
+            />
+            <TouchableOpacity style={styles.searchBtn}>
+              <Text style={styles.searchBtnText}>Tìm kiếm</Text>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
+      </View>
+
+      {/* Filter bar (khôi phục component để modal hoạt động như cũ) */}
       <SearchFilterBarComponent />
 
-      {/* Danh sách trọ */}
-      <Text style={styles.sectionTitle}>Danh sách phòng trọ</Text>
+      {/* Title */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Danh sách phòng trọ</Text>
+        <TouchableOpacity>
+          <Text style={styles.link}>Xem tất cả</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Grid 2 cột (giữ như bạn đang dùng) */}
       <FlatList
         data={mockPosts}
         keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={item.image} style={styles.cardImage} />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardPrice}>{item.price}</Text>
-            <Text style={styles.cardLocation}>{item.location}</Text>
-          </View>
-        )}
+        numColumns={2}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={{ gap: 12 }}
+        renderItem={renderItem}
       />
-    </ScrollView>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  bannerWrap: { backgroundColor: COLORS.primary },
   banner: {
-    height: 240,
+    height: 220,
     justifyContent: 'flex-end',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
-  searchContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 12,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+  bannerImage: {
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    opacity: 0.9,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headline: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    elevation: 6,
   },
   searchInput: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 8,
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
+    color: COLORS.text,
   },
-  searchButton: {
-    borderRadius: 8,
-    backgroundColor: '#007BFF',
+  searchBtn: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginVertical: 16,
-    marginLeft: 16,
+  searchBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  sectionHeader: {
+    marginTop: 18,
+    marginHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
   },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  link: { color: COLORS.primary, fontWeight: '600' },
+
+  listContent: { padding: 16, paddingTop: 12, gap: 12, paddingBottom: 24 },
+
   card: {
-    backgroundColor: '#fff',
-    marginRight: 16,
-    borderRadius: 12,
-    padding: 12,
-    width: 220,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS,
+    padding: 10,
+    flex: 1,
+    elevation: 3,
   },
-  cardImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 8,
+  thumbWrap: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
     marginBottom: 8,
+    aspectRatio: 16 / 9,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  cardImage: { width: '100%', height: '100%' },
+  bookmarkBtn: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 999,
+    padding: 6,
   },
+  cardTitle: { fontSize: 14.5, fontWeight: '600', color: COLORS.text },
   cardPrice: {
     fontSize: 14,
-    color: '#EF4444',
-    marginVertical: 4,
+    color: COLORS.price,
+    marginTop: 4,
+    fontWeight: '700',
   },
-  cardLocation: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
+  rowCenter: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  cardLocation: { color: COLORS.sub, fontSize: 12, flex: 1 },
 });
-
-export default HomeScreen;
