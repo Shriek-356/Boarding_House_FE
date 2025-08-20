@@ -43,16 +43,13 @@ const RADIUS = 14;
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
 
-  // --- ĐỀ XUẤT GẦN BẠN (không ảnh hưởng logic filter cũ) ---
+  // --- ĐỀ XUẤT GẦN BẠN ---
   const {
     data: nearYou,
     loading: loadingNear,
     error: errorNear,
     area,
-  } = useNearYouRecommendations(
-    8,
-    { district: 'Quận 1', province: 'TP. Hồ Chí Minh' } // fallback khi user từ chối quyền
-  );
+  } = useNearYouRecommendations(8);
 
   const renderItem = ({ item }) => (
     <TouchableOpacity activeOpacity={0.85} style={styles.card}>
@@ -133,7 +130,7 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>
           Gần bạn{area ? ` • ${area.district}, ${area.province}` : ''}
         </Text>
-        {!!errorNear && <Text style={styles.note}>Đang dùng khu vực mặc định</Text>}
+        {!!area?.isFallback && <Text style={styles.note}>Đang dùng khu vực mặc định</Text>}
       </View>
 
       {loadingNear ? (
@@ -146,6 +143,11 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8 }}
           renderItem={renderNearCard}
+          ListEmptyComponent={
+            <Text style={[styles.loadingText, { paddingVertical: 8 }]}>
+              Chưa có bài phù hợp khu vực này.
+            </Text>
+          }
         />
       )}
 
