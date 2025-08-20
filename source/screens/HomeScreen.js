@@ -14,6 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 import { useNearYouRecommendations } from '../hooks/useNearYouRecommendations';
+import { formatAreaLabel } from '../utils/formatAreaLabel';
 
 const mockPosts = [
   { id: '1', title: 'Phòng trọ 25m2 có gác lửng', price: '2.5 triệu/tháng', location: 'Q.10, TP.HCM', image: require('../../assets/images/logo.avif') },
@@ -128,7 +129,7 @@ export default function HomeScreen() {
       {/* --- Section: GẦN BẠN --- */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          Gần bạn{area ? ` • ${area.district}, ${area.province}` : ''}
+          Gần bạn{area ? ` • ${formatAreaLabel(area)}` : ''}
         </Text>
         {!!area?.isFallback && <Text style={styles.note}>Đang dùng khu vực mặc định</Text>}
       </View>
