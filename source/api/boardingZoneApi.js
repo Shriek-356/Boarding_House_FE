@@ -15,7 +15,8 @@ export const endpoints = {
     deleteBoardingZoneAmenity: (id) => `/delete-boarding-zone-amenity/${id}`,
     deleteBoardingZoneTarget: (id) => `/delete-boarding-zone-target/${id}`,
     deleteBoardingZoneEnvironment: (id) => `/delete-boarding-zone-environment/${id}`,
-    deleteBoardingZone: (id) => `/delete-boarding-zone/${id}`
+    deleteBoardingZone: (id) => `/delete-boarding-zone/${id}`,
+    getRecommendedBoardingZones: "/boarding-zones/recommendations/by-area"
 }
 
 export const searchBoardingZones = async (filters) => {
@@ -157,6 +158,17 @@ export const deleteBoardingZoneEnvironment = async (environmentId, token) => {
 export const deleteBoardingZone = async (zoneId, token) => {
     try {
         const response = await axiosDAuthApiInstance(token).delete(endpoints.deleteBoardingZone(zoneId));
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const getRecommendedBoardingZones = async (province, district, limit) => {
+    try {
+        const response = await axiosInstance.get(endpoints.getRecommendedBoardingZones, {
+            params: { province, district, limit }
+        });
         return response.data;
     } catch (error) {
         throw error;
