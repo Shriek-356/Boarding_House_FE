@@ -10,22 +10,25 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 import { useNearYouRecommendations } from '../hooks/useNearYouRecommendations';
 import { formatAreaLabel } from '../utils/formatAreaLabel';
 
+// --- Demo list cũ (giữ nguyên logic của bạn) ---
 const mockPosts = [
   { id: '1', title: 'Phòng trọ 25m2 có gác lửng', price: '2.5 triệu/tháng', location: 'Q.10, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '2', title: 'Nhà nguyên căn 3 tầng',     price: '7 triệu/tháng',   location: 'Q.12, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '2', title: 'Nhà nguyên căn 3 tầng', price: '7 triệu/tháng', location: 'Q.12, TP.HCM', image: require('../../assets/images/logo.avif') },
   { id: '3', title: 'Phòng mới tinh, full nội thất', price: '3.8 triệu/tháng', location: 'Q.7, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '4', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '5', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '6', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '7', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '8', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '9', title: 'Căn hộ mini ban công rộng',     price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '4', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '5', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '6', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '7', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '8', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
+  { id: '9', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
 ];
 
 const COLORS = {
@@ -38,8 +41,12 @@ const COLORS = {
   price: '#EF4444',
   stroke: '#E5E7EB',
 };
-
 const RADIUS = 14;
+
+// --- Kích thước item “Gần bạn” (to, tỉ lệ theo màn hình) ---
+const { width: W } = Dimensions.get('window');
+const COMPACT_W = 220;       // chiều rộng thẻ nhỏ giống ảnh
+const GAP = 12;
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
@@ -52,6 +59,7 @@ export default function HomeScreen() {
     area,
   } = useNearYouRecommendations(8);
 
+  // Item card ở grid 2 cột (giữ nguyên)
   const renderItem = ({ item }) => (
     <TouchableOpacity activeOpacity={0.85} style={styles.card}>
       <View style={styles.thumbWrap}>
@@ -71,24 +79,49 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const renderNearCard = ({ item }) => (
-    <TouchableOpacity style={styles.nearCard} activeOpacity={0.85}>
-      <Image
-        source={ item?.images?.[0] ? { uri: item.images[0] } : require('../../assets/images/logo.avif') }
-        style={styles.nearThumb}
-      />
-      <Text numberOfLines={2} style={styles.nearTitle}>{item.name}</Text>
-      <Text style={styles.nearPrice}>
-        {Intl.NumberFormat('vi-VN').format(item.expectedPrice)} đ/tháng
-      </Text>
-      <View style={styles.rowCenter}>
-        <Icon name="map-marker" size={16} color={COLORS.sub} />
-        <Text numberOfLines={1} style={styles.nearLoc}>
-          {item.district}, {item.province}
+  // Item đẹp cho “Gần bạn” (UI-only)
+  const renderNearCard = ({ item }) => {
+    const src = item?.images?.[0]
+      ? { uri: item.images[0] }
+      : require('../../assets/images/logo.avif');
+
+    return (
+      <TouchableOpacity style={styles.nearCard} activeOpacity={0.92}>
+        {/* Ảnh lớn 16:9 */}
+        <View style={styles.nearThumbWrap}>
+          <Image source={src} style={styles.nearThumb} resizeMode="cover" />
+
+          {/* Giá nổi */}
+          <View style={styles.badgePrice}>
+            <Text style={styles.badgePriceText}>
+              {Intl.NumberFormat('vi-VN').format(item.expectedPrice)} đ/tháng
+            </Text>
+          </View>
+
+          {/* Nút tim */}
+          <TouchableOpacity style={styles.heartBtnNear}>
+            <Icon name="heart-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Tên & mô tả ngắn */}
+        <Text numberOfLines={2} style={styles.nearName}>{item.name}</Text>
+        <Text numberOfLines={1} style={styles.nearBrief}>
+          {item.area ? `${item.area} m²` : null}
+          {item.roomCount ? ` • ${item.roomCount} phòng` : ''}
+          {item.street ? ` • ${item.street}` : item.ward ? ` • ${item.ward}` : ''}
         </Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+        {/* Địa điểm */}
+        <View style={styles.nearMeta}>
+          <Icon name="map-marker" size={16} color={COLORS.sub} />
+          <Text numberOfLines={1} style={styles.nearLoc}>
+            {item.district}, {item.province}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -142,13 +175,12 @@ export default function HomeScreen() {
           keyExtractor={(x) => x.id}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8 }}
           renderItem={renderNearCard}
-          ListEmptyComponent={
-            <Text style={[styles.loadingText, { paddingVertical: 8 }]}>
-              Chưa có bài phù hợp khu vực này.
-            </Text>
-          }
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 6 }}
+          snapToInterval={COMPACT_W + GAP}
+          decelerationRate={Platform.OS === 'ios' ? 0 : 'fast'}
+          snapToAlignment="start"
+          disableIntervalMomentum
         />
       )}
 
@@ -176,6 +208,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
+
+  // Banner
   bannerWrap: { backgroundColor: COLORS.primary },
   banner: {
     height: 220,
@@ -214,6 +248,7 @@ const styles = StyleSheet.create({
   searchBtn: { backgroundColor: COLORS.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   searchBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
+  // Section header
   sectionHeader: {
     marginTop: 18,
     marginHorizontal: 16,
@@ -225,22 +260,59 @@ const styles = StyleSheet.create({
   link: { color: COLORS.primary, fontWeight: '600' },
   note: { color: COLORS.sub, fontSize: 12 },
 
-  // Near-you
   loadingText: { paddingHorizontal: 16, color: COLORS.sub, marginTop: 8 },
-  nearCard: {
-    width: 220,
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 10,
-    marginRight: 12,
-    elevation: 3,
-  },
-  nearThumb: { width: '100%', aspectRatio: 16 / 9, borderRadius: 8, marginBottom: 8 },
-  nearTitle: { fontSize: 14.5, fontWeight: '600', color: COLORS.text },
-  nearPrice: { fontSize: 14, fontWeight: '700', color: COLORS.price, marginTop: 4 },
-  nearLoc: { color: COLORS.sub, fontSize: 12, flex: 1 },
 
-  // Grid
+  // --- Near you (new UI) ---
+  nearCompact: {
+    width: COMPACT_W,
+    marginRight: GAP,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    padding: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  nearCompactHeader: {
+    marginBottom: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  nearCompactThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#EEF2F7',
+  },
+  nearHeart: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: '#EFF1F5',
+    borderRadius: 16,
+    padding: 6,
+  },
+  nearCompactTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  nearCompactPrice: {
+    marginTop: 6,
+    color: COLORS.price,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  nearCompactLoc: {
+    color: COLORS.sub,
+    fontSize: 12,
+    flex: 1,
+    marginLeft: 2,
+  },
+
+  // --- Grid list cũ ---
   listContent: { padding: 16, paddingTop: 12, gap: 12, paddingBottom: 24 },
   card: { backgroundColor: COLORS.card, borderRadius: RADIUS, padding: 10, flex: 1, elevation: 3 },
   thumbWrap: {
@@ -251,7 +323,14 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
   },
   cardImage: { width: '100%', height: '100%' },
-  bookmarkBtn: { position: 'absolute', right: 8, top: 8, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 999, padding: 6 },
+  bookmarkBtn: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 999,
+    padding: 6,
+  },
   cardTitle: { fontSize: 14.5, fontWeight: '600', color: COLORS.text },
   cardPrice: { fontSize: 14, color: COLORS.price, marginTop: 4, fontWeight: '700' },
   rowCenter: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
