@@ -174,3 +174,12 @@ export const getRecommendedBoardingZones = async (province, district, limit) => 
         throw error;
     }
 }
+
+export const getAllBoardingZones = async (page) => {
+    try {
+        const response = await axiosInstance.get(endpoints.getAllBoardingZonesByLandlord, { params: { page } });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+}

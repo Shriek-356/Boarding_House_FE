@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 import { useNearYouRecommendations } from '../hooks/useNearYouRecommendations';
 import { formatAreaLabel } from '../utils/formatAreaLabel';
+import { getAllBoardingZones } from '../api/boardingZoneApi';
 
 // --- Demo list cũ (giữ nguyên logic của bạn) ---
 const mockPosts = [
