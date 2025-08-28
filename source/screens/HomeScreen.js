@@ -19,6 +19,7 @@ import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 import { useNearYouRecommendations } from '../hooks/useNearYouRecommendations';
 import { formatAreaLabel } from '../utils/formatAreaLabel';
 import { getAllBoardingZones } from '../api/boardingZoneApi';
+import { useNavigation } from '@react-navigation/native';
 
 const COLORS = {
   bg: '#F6F7FB',
@@ -53,6 +54,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const navigation = useNavigation();
 
   const fetchPage = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -177,7 +179,7 @@ export default function HomeScreen() {
           <View style={styles.searchBox}>
             <Icon name="magnify" size={20} color={COLORS.sub} />
             <TextInput
-              placeholder="Bạn muốn tìm trọ ở đâu?"
+              placeholder="Tìm kiếm người dùng"
               placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
               value={searchText}
@@ -186,7 +188,7 @@ export default function HomeScreen() {
             />
             <TouchableOpacity
               style={styles.searchBtn}
-              onPress={() => Alert.alert('Tìm kiếm', searchText || 'Bạn chưa nhập từ khoá')}
+              onPress={() => navigation.navigate('UserSearch')}
             >
               <Text style={styles.searchBtnText}>Tìm kiếm</Text>
             </TouchableOpacity>
