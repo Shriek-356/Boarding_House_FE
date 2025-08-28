@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,25 +12,13 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import SearchFilterBarComponent from '../components/SearchFilterBarComponent';
 import { useNearYouRecommendations } from '../hooks/useNearYouRecommendations';
 import { formatAreaLabel } from '../utils/formatAreaLabel';
 import { getAllBoardingZones } from '../api/boardingZoneApi';
-
-// --- Demo list cũ (giữ nguyên logic của bạn) ---
-const mockPosts = [
-  { id: '1', title: 'Phòng trọ 25m2 có gác lửng', price: '2.5 triệu/tháng', location: 'Q.10, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '2', title: 'Nhà nguyên căn 3 tầng', price: '7 triệu/tháng', location: 'Q.12, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '3', title: 'Phòng mới tinh, full nội thất', price: '3.8 triệu/tháng', location: 'Q.7, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '4', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '5', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '6', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '7', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '8', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-  { id: '9', title: 'Căn hộ mini ban công rộng', price: '5.2 triệu/tháng', location: 'Bình Thạnh, TP.HCM', image: require('../../assets/images/logo.avif') },
-];
 
 const COLORS = {
   bg: '#F6F7FB',
@@ -43,44 +31,100 @@ const COLORS = {
   stroke: '#E5E7EB',
 };
 const RADIUS = 14;
-
-// --- Kích thước item “Gần bạn” (to, tỉ lệ theo màn hình) ---
 const { width: W } = Dimensions.get('window');
-const COMPACT_W = 220;       // chiều rộng thẻ nhỏ giống ảnh
+const COMPACT_W = 220;
 const GAP = 12;
+
+function buildAddress(it) {
+  return (
+    it?.address ||
+    [it?.street, it?.ward, it?.district, it?.province].filter(Boolean).join(', ')
+  );
+}
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('');
 
-  // --- ĐỀ XUẤT GẦN BẠN ---
-  const {
-    data: nearYou,
-    loading: loadingNear,
-    error: errorNear,
-    area,
-  } = useNearYouRecommendations(8);
+  const { data: nearYou, loading: loadingNear, area } = useNearYouRecommendations(8);
 
-  // Item card ở grid 2 cột (giữ nguyên)
-  const renderItem = ({ item }) => (
-    <TouchableOpacity activeOpacity={0.85} style={styles.card}>
-      <View style={styles.thumbWrap}>
-        <Image source={item.image} style={styles.cardImage} />
-        <TouchableOpacity style={styles.bookmarkBtn}>
-          <Icon name="heart-outline" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
 
-      <Text numberOfLines={2} style={styles.cardTitle}>{item.title}</Text>
-      <Text style={styles.cardPrice}>{item.price}</Text>
+  const fetchPage = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const res = await getAllBoardingZones(page);
+      const content = Array.isArray(res?.content) ? res.content : [];
+      setPosts(prev => [...prev, ...content]);
+      setPage(prev => prev + 1);
+      setHasMore(!res?.last);
+      setError('');
+    } catch (e) {
+      setError(e?.message || 'Có lỗi xảy ra khi tải danh sách.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore, page]);
 
-      <View style={styles.rowCenter}>
-        <Icon name="map-marker" size={16} color={COLORS.sub} />
-        <Text numberOfLines={1} style={styles.cardLocation}>{item.location}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const onRefresh = useCallback(async () => {
+    if (loading) return;
+    setRefreshing(true);
+    try {
+      const res = await getAllBoardingZones(0);
+      const content = Array.isArray(res?.content) ? res.content : [];
+      setPosts(content);
+      setPage(1);
+      setHasMore(!res?.last);
+      setError('');
+    } catch (e) {
+      setError(e?.message || 'Có lỗi xảy ra khi làm mới.');
+      setPosts([]);
+      setPage(0);
+      setHasMore(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loading]);
 
-  // Item đẹp cho “Gần bạn” (UI-only)
+  useEffect(() => {
+    setPosts([]); setPage(0); setHasMore(true); setError('');
+    fetchPage();
+  }, []);
+
+  const renderItem = ({ item }) => {
+    const img = item?.images?.[0]
+      ? { uri: item.images[0] }
+      : require('../../assets/images/logo.avif');
+
+    return (
+      <TouchableOpacity activeOpacity={0.85} style={styles.card}>
+        <View style={styles.thumbWrap}>
+          <Image source={img} style={styles.cardImage} />
+          <TouchableOpacity style={styles.bookmarkBtn}>
+            <Icon name="heart-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <Text numberOfLines={2} style={styles.cardTitle}>{item?.name || '—'}</Text>
+        <Text style={styles.cardPrice}>
+          {item?.expectedPrice != null ? `${item.expectedPrice} đ/tháng` : ''}
+        </Text>
+
+        <View style={styles.rowCenter}>
+          <Icon name="map-marker" size={16} color={COLORS.sub} />
+          <Text numberOfLines={1} style={styles.cardLocation}>
+            {buildAddress(item) || '—'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderNearCard = ({ item }) => {
     const src = item?.images?.[0]
       ? { uri: item.images[0] }
@@ -88,36 +132,29 @@ export default function HomeScreen() {
 
     return (
       <TouchableOpacity style={styles.nearCard} activeOpacity={0.92}>
-        {/* Ảnh lớn 16:9 */}
         <View style={styles.nearThumbWrap}>
           <Image source={src} style={styles.nearThumb} resizeMode="cover" />
-
-          {/* Giá nổi */}
           <View style={styles.badgePrice}>
             <Text style={styles.badgePriceText}>
-              {Intl.NumberFormat('vi-VN').format(item.expectedPrice)} đ/tháng
+              {item?.expectedPrice != null ? `${item.expectedPrice} đ/tháng` : ''}
             </Text>
           </View>
-
-          {/* Nút tim */}
           <TouchableOpacity style={styles.heartBtnNear}>
             <Icon name="heart-outline" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Tên & mô tả ngắn */}
-        <Text numberOfLines={2} style={styles.nearName}>{item.name}</Text>
+        <Text numberOfLines={2} style={styles.nearName}>{item?.name}</Text>
         <Text numberOfLines={1} style={styles.nearBrief}>
-          {item.area ? `${item.area} m²` : null}
-          {item.roomCount ? ` • ${item.roomCount} phòng` : ''}
-          {item.street ? ` • ${item.street}` : item.ward ? ` • ${item.ward}` : ''}
+          {item?.area ? `${item.area} m²` : null}
+          {item?.roomCount ? ` • ${item.roomCount} phòng` : ''}
+          {item?.street ? ` • ${item.street}` : item?.ward ? ` • ${item.ward}` : ''}
         </Text>
 
-        {/* Địa điểm */}
         <View style={styles.nearMeta}>
           <Icon name="map-marker" size={16} color={COLORS.sub} />
           <Text numberOfLines={1} style={styles.nearLoc}>
-            {item.district}, {item.province}
+            {item?.district ? `${item.district}, ` : ''}{item?.province || ''}
           </Text>
         </View>
       </TouchableOpacity>
@@ -128,18 +165,15 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-      {/* Banner */}
       <View style={styles.bannerWrap}>
         <ImageBackground
           source={require('../../assets/images/logo.avif')}
           style={styles.banner}
           imageStyle={styles.bannerImage}
         >
-          {/* overlay KHÔNG chặn touch */}
           <View style={styles.overlay} pointerEvents="none" />
           <Text style={styles.headline}>Tìm trọ dễ • nhanh • chuẩn</Text>
 
-          {/* Floating Search */}
           <View style={styles.searchBox}>
             <Icon name="magnify" size={20} color={COLORS.sub} />
             <TextInput
@@ -150,17 +184,18 @@ export default function HomeScreen() {
               onChangeText={setSearchText}
               returnKeyType="search"
             />
-            <TouchableOpacity style={styles.searchBtn}>
+            <TouchableOpacity
+              style={styles.searchBtn}
+              onPress={() => Alert.alert('Tìm kiếm', searchText || 'Bạn chưa nhập từ khoá')}
+            >
               <Text style={styles.searchBtnText}>Tìm kiếm</Text>
             </TouchableOpacity>
           </View>
         </ImageBackground>
       </View>
 
-      {/* Filter bar (giữ nguyên để modal hoạt động như cũ) */}
       <SearchFilterBarComponent />
 
-      {/* --- Section: GẦN BẠN --- */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
           Gần bạn{area ? ` • ${formatAreaLabel(area)}` : ''}
@@ -173,7 +208,7 @@ export default function HomeScreen() {
       ) : (
         <FlatList
           data={nearYou}
-          keyExtractor={(x) => x.id}
+          keyExtractor={x => String(x.id)}
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={renderNearCard}
@@ -185,23 +220,31 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* --- Section: Danh sách phòng trọ (giữ như cũ) --- */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Danh sách phòng trọ</Text>
-        <TouchableOpacity>
-          <Text style={styles.link}>Xem tất cả</Text>
+        <TouchableOpacity onPress={onRefresh}>
+          <Text style={styles.link}>Làm mới</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Grid 2 cột */}
       <FlatList
-        data={mockPosts}
-        keyExtractor={(item) => item.id}
+        data={posts}
+        keyExtractor={(item) => String(item.id)}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         columnWrapperStyle={{ gap: 12 }}
         renderItem={renderItem}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onEndReached={() => { if (!loading && hasMore) fetchPage(); }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loading ? <Text style={[styles.loadingText, { textAlign: 'center', marginTop: 6 }]}>Đang tải thêm…</Text> : null
+        }
+        ListEmptyComponent={
+          !loading ? <Text style={[styles.loadingText, { textAlign: 'center' }]}>{error || 'Không có dữ liệu'}</Text> : null
+        }
       />
     </SafeAreaView>
   );
@@ -209,8 +252,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-
-  // Banner
   bannerWrap: { backgroundColor: COLORS.primary },
   banner: {
     height: 220,
@@ -229,12 +270,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  headline: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
+  headline: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 10 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,8 +284,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 0, color: COLORS.text },
   searchBtn: { backgroundColor: COLORS.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   searchBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-
-  // Section header
   sectionHeader: {
     marginTop: 18,
     marginHorizontal: 16,
@@ -260,11 +294,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   link: { color: COLORS.primary, fontWeight: '600' },
   note: { color: COLORS.sub, fontSize: 12 },
-
   loadingText: { paddingHorizontal: 16, color: COLORS.sub, marginTop: 8 },
-
-  // --- Near you (new UI) ---
-  nearCompact: {
+  nearCard: {
     width: COMPACT_W,
     marginRight: GAP,
     backgroundColor: COLORS.card,
@@ -275,63 +306,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
   },
-  nearCompactHeader: {
-    marginBottom: 8,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  nearCompactThumb: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: '#EEF2F7',
-  },
-  nearHeart: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    backgroundColor: '#EFF1F5',
-    borderRadius: 16,
-    padding: 6,
-  },
-  nearCompactTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
-    lineHeight: 20,
-  },
-  nearCompactPrice: {
-    marginTop: 6,
-    color: COLORS.price,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  nearCompactLoc: {
-    color: COLORS.sub,
-    fontSize: 12,
-    flex: 1,
-    marginLeft: 2,
-  },
-
-  // --- Grid list cũ ---
+  nearThumbWrap: { borderRadius: 12, overflow: 'hidden', position: 'relative', aspectRatio: 16 / 9, marginBottom: 8 },
+  nearThumb: { width: '100%', height: '100%' },
+  badgePrice: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgePriceText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  heartBtnNear: { position: 'absolute', right: 8, top: 8, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 999, padding: 6 },
+  nearName: { fontSize: 15, fontWeight: '700', color: COLORS.text, lineHeight: 20 },
+  nearBrief: { marginTop: 4, color: COLORS.sub, fontSize: 12 },
+  nearMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  nearLoc: { color: COLORS.sub, fontSize: 12, flex: 1 },
   listContent: { padding: 16, paddingTop: 12, gap: 12, paddingBottom: 24 },
   card: { backgroundColor: COLORS.card, borderRadius: RADIUS, padding: 10, flex: 1, elevation: 3 },
-  thumbWrap: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    position: 'relative',
-    marginBottom: 8,
-    aspectRatio: 16 / 9,
-  },
+  thumbWrap: { borderRadius: 10, overflow: 'hidden', position: 'relative', marginBottom: 8, aspectRatio: 16 / 9 },
   cardImage: { width: '100%', height: '100%' },
-  bookmarkBtn: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 999,
-    padding: 6,
-  },
+  bookmarkBtn: { position: 'absolute', right: 8, top: 8, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 999, padding: 6 },
   cardTitle: { fontSize: 14.5, fontWeight: '600', color: COLORS.text },
   cardPrice: { fontSize: 14, color: COLORS.price, marginTop: 4, fontWeight: '700' },
   rowCenter: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },

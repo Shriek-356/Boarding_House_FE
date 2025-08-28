@@ -20,11 +20,13 @@ import Toast from 'react-native-toast-message';
 const { width } = Dimensions.get('window');
 
 const SearchResultScreen = ({ route }) => {
-  const { location, price, area } = route.params;
+  const { location, price, area } = route.params || {};
   const [results, setResults] = useState([]);
+  const [seenIds, setSeenIds] = useState(new Set()); // <- để khử trùng
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [reachedDuringMomentum, setReachedDuringMomentum] = useState(false); // <- chặn gọi trùng
   const navigation = useNavigation();
 
   const fetchResults = useCallback(async () => {
@@ -44,30 +46,42 @@ const SearchResultScreen = ({ route }) => {
 
     try {
       const data = await searchBoardingZones(filters);
-      if (Array.isArray(data.content)) {
-        setResults((prev) => [...prev, ...data.content]);
+      if (Array.isArray(data?.content)) {
+        // Khử trùng theo id trước khi append
+        setResults((prev) => {
+          const next = [];
+          const nextSeen = new Set(seenIds);
+          for (const it of data.content) {
+            if (!nextSeen.has(it.id)) {
+              next.push(it);
+              nextSeen.add(it.id);
+            }
+          }
+          setSeenIds(nextSeen);
+          return [...prev, ...next];
+        });
         setPage((prev) => prev + 1);
         setHasMore(!data.last);
       }
     } catch (error) {
       // Xử lý lỗi an toàn
       let message = 'Đã xảy ra lỗi không xác định.';
-
-      if (error.response) {
-        // Lỗi từ phía server (backend trả về)
+      if (error?.response) {
         if (typeof error.response.data === 'string') {
           message = error.response.data;
-        } else if (error.response.data.message) {
+        } else if (error.response.data?.message) {
           message = error.response.data.message;
         } else {
-          message = JSON.stringify(error.response.data);
+          try {
+            message = JSON.stringify(error.response.data);
+          } catch {
+            message = 'Lỗi máy chủ.';
+          }
         }
-      } else if (error.request) {
-        // Request đã gửi đi nhưng không nhận được phản hồi
+      } else if (error?.request) {
         message = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.';
       } else {
-        // Lỗi khi thiết lập request
-        message = error.message;
+        message = error?.message || message;
       }
       Toast.show({
         type: 'error',
@@ -78,11 +92,19 @@ const SearchResultScreen = ({ route }) => {
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, page, location, price, area]);
+  }, [loading, hasMore, page, location, price, area, seenIds]);
 
+  // Load trang đầu
   useEffect(() => {
-    fetchResults(); // gọi page 0 khi mở lần đầu
-  }, []);
+    // Reset khi vào màn này hoặc khi bộ lọc thay đổi (nếu bạn muốn reset khi thay params, thêm chúng vào deps)
+    setResults([]);
+    setSeenIds(new Set());
+    setPage(0);
+    setHasMore(true);
+    // Gọi page 0
+    fetchResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // nếu muốn reset khi filter đổi: thêm location, price, area vào deps
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -95,25 +117,26 @@ const SearchResultScreen = ({ route }) => {
       />
       <View style={styles.cardContent}>
         <Text style={styles.price}>
-          {item.expectedPrice?.toLocaleString('vi-VN')}đ/tháng
+          {item?.expectedPrice != null ? `${item.expectedPrice.toLocaleString('vi-VN')}đ/tháng` : ''}
         </Text>
-        <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.title} numberOfLines={1}>{item?.name || ''}</Text>
         <View style={styles.locationContainer}>
           <Icon name="location-outline" size={14} color="#888" />
           <Text style={styles.address} numberOfLines={1}>
-            {[item.address, item.ward, item.district].filter(Boolean).join(', ')}
+            {[item?.address, item?.ward, item?.district].filter(Boolean).join(', ')}
           </Text>
         </View>
         <View style={styles.detailsContainer}>
           <View style={styles.detailItem}>
             <Icon name="square-outline" size={14} color="#6C5CE7" />
-            <Text style={styles.detailText}>{item.area}m²</Text>
+            <Text style={styles.detailText}>{item?.area}m²</Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
 
+  // Loading lần đầu
   if (loading && results.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -123,6 +146,7 @@ const SearchResultScreen = ({ route }) => {
     );
   }
 
+  // Không có kết quả
   if (!loading && results.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -156,9 +180,15 @@ const SearchResultScreen = ({ route }) => {
       <FlatList
         data={results}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => (item?.id ? String(item.id) : `fallback-${index}`)}
         ListHeaderComponent={<Text style={styles.resultCount}>{results.length} kết quả tìm kiếm</Text>}
-        onEndReached={fetchResults}
+        onMomentumScrollBegin={() => setReachedDuringMomentum(false)}
+        onEndReached={() => {
+          if (!reachedDuringMomentum && !loading && hasMore) {
+            fetchResults();
+            setReachedDuringMomentum(true);
+          }
+        }}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
           loading && hasMore ? (
@@ -169,11 +199,12 @@ const SearchResultScreen = ({ route }) => {
                 loop
                 style={{ width: 90, height: 90 }}
               />
-              <Text style={styles.loadingText}>Đang tải thêm...</Text>
+              <Text style={styles.loadingMoreText}>Đang tải thêm...</Text>
             </View>
           ) : null
         }
         contentContainerStyle={{
+          padding: 15,
           paddingBottom: 32,
           minHeight: '100%',
         }}
@@ -241,10 +272,6 @@ const styles = StyleSheet.create({
     color: '#636E72',
     textAlign: 'center',
   },
-  listContainer: {
-    padding: 15,
-    paddingBottom: 20,
-  },
   resultCount: {
     fontSize: 14,
     color: '#636E72',
@@ -290,6 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#636E72',
     marginLeft: 5,
+    flex: 1,
   },
   detailsContainer: {
     flexDirection: 'row',
@@ -304,13 +332,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#636E72',
     marginLeft: 5,
-  }, loadingMoreContainer: {
+  },
+  loadingMoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  loadingText: {
+  loadingMoreText: {
     marginLeft: 10,
     fontSize: 14,
     color: '#6B7280',
