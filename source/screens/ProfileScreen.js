@@ -142,7 +142,12 @@ const PostsTab = ({ profileUserId }) => {
     try {
       const data = await getAllBoardingZonesByLandlord(profileUserId, page);
       if (Array.isArray(data?.content)) {
-        setPosts(prev => [...prev, ...data.content]);
+        // DEDUPE inline (không helper)
+        setPosts(prev => {
+          const existing = new Set(prev.map(x => String(x.id)));
+          const append = data.content.filter(x => !existing.has(String(x.id)));
+          return [...prev, ...append];
+        });
         setPage(prev => prev + 1);
         setHasMore(!data.last);
         setError('');
@@ -156,7 +161,6 @@ const PostsTab = ({ profileUserId }) => {
         err?.response?.data ||
         err?.message ||
         'Có lỗi xảy ra.';
-
       if (msg.includes('Không tìm thấy bài đăng trọ')) {
         setHasMore(false);
         if (page === 0) setPosts([]);
@@ -176,7 +180,7 @@ const PostsTab = ({ profileUserId }) => {
     try {
       const data = await getAllBoardingZonesByLandlord(profileUserId, 0);
       const content = Array.isArray(data?.content) ? data.content : [];
-      setPosts(content);
+      setPosts(content);           // refresh reset hẳn list
       setPage(1);
       setHasMore(!data?.last);
       setError('');
@@ -194,9 +198,16 @@ const PostsTab = ({ profileUserId }) => {
     }
   }, [loading, profileUserId]);
 
+  // load lần đầu
+  useEffect(() => { fetchUserPosts(); }, [fetchUserPosts]);
+
+  // reset nếu đổi user
   useEffect(() => {
-    fetchUserPosts();
-  }, [fetchUserPosts]);
+    setPosts([]);
+    setPage(0);
+    setHasMore(true);
+    setError('');
+  }, [profileUserId]);
 
   const renderPostCard = ({ item }) => (
     <TouchableOpacity style={styles.postCardBox}>
@@ -214,7 +225,7 @@ const PostsTab = ({ profileUserId }) => {
   return (
     <FlatList
       data={posts}
-      keyExtractor={(item) => String(item.id)}
+      keyExtractor={(item, index) => `${item?.id ?? 'noid'}-${index}`}
       renderItem={renderPostCard}
       onEndReached={() => { if (!loading && hasMore) fetchUserPosts(); }}
       onEndReachedThreshold={0.3}
@@ -260,10 +271,14 @@ const DiscussionsTab = ({ profileUserId }) => {
     if (loading || !hasMore) return;
     setLoading(true);
     try {
-      const data = await getAllPosts(page, profileUserId); // giữ nguyên signature của bạn
-
+      const data = await getAllPosts(page, profileUserId);
       if (Array.isArray(data?.content)) {
-        setItems(prev => [...prev, ...data.content]);
+        // DEDUPE inline
+        setItems(prev => {
+          const existing = new Set(prev.map(x => String(x.id)));
+          const append = data.content.filter(x => !existing.has(String(x.id)));
+          return [...prev, ...append];
+        });
         setPage(prev => prev + 1);
         setHasMore(!data.last);
         setError('');
@@ -292,7 +307,7 @@ const DiscussionsTab = ({ profileUserId }) => {
     try {
       const data = await getAllPosts(0, profileUserId);
       const content = Array.isArray(data?.content) ? data.content : [];
-      setItems(content);
+      setItems(content);         // reset list khi refresh
       setPage(1);
       setHasMore(!data?.last);
       setError('');
@@ -306,9 +321,16 @@ const DiscussionsTab = ({ profileUserId }) => {
     }
   }, [loading, profileUserId]);
 
+  // load lần đầu
+  useEffect(() => { fetchDiscussions(); }, [fetchDiscussions]);
+
+  // reset nếu đổi user
   useEffect(() => {
-    fetchDiscussions();
-  }, []);
+    setItems([]);
+    setPage(0);
+    setHasMore(true);
+    setError('');
+  }, [profileUserId]);
 
   const renderDiscussion = ({ item }) => (
     <TouchableOpacity
@@ -347,7 +369,7 @@ const DiscussionsTab = ({ profileUserId }) => {
   return (
     <FlatList
       data={items}
-      keyExtractor={(item, idx) => String(item.id ?? idx)}
+      keyExtractor={(item, idx) => `${item?.id ?? 'noid'}-${idx}`}
       renderItem={renderDiscussion}
       onEndReached={() => { if (!loading && hasMore) fetchDiscussions(); }}
       onEndReachedThreshold={0.3}
@@ -379,7 +401,7 @@ const DiscussionsTab = ({ profileUserId }) => {
 };
 
 /* -------------------- Screen chính -------------------- */
-const UserProfileScreen = () => {
+const ProfileScreen = () => {
   const { profileUser } = useRoute().params;
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
@@ -399,7 +421,6 @@ const UserProfileScreen = () => {
         isCurrentUser={isCurrentUser}
         onMessage={handleMessage}
       />
-
 
       <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
         <Tab.Navigator
@@ -565,4 +586,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UserProfileScreen;
+export default ProfileScreen;
