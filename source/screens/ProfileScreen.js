@@ -199,7 +199,7 @@ const PostsTab = ({ profileUserId }) => {
   }, [loading, profileUserId]);
 
   // load lần đầu
-  useEffect(() => { fetchUserPosts(); }, [fetchUserPosts]);
+  useEffect(() => { fetchUserPosts(); }, []);
 
   // reset nếu đổi user
   useEffect(() => {
@@ -322,7 +322,7 @@ const DiscussionsTab = ({ profileUserId }) => {
   }, [loading, profileUserId]);
 
   // load lần đầu
-  useEffect(() => { fetchDiscussions(); }, [fetchDiscussions]);
+  useEffect(() => { fetchDiscussions(); }, []);
 
   // reset nếu đổi user
   useEffect(() => {
