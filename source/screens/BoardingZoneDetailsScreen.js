@@ -206,7 +206,6 @@ const BoardingDetailScreen = () => {
 
     const handleImageError = useCallback(({ nativeEvent: { error } }) => {
         console.log('Image load error:', error);
-        // You could set a fallback image here
     }, []);
 
     const renderImageItem = useCallback(({ item, index }) => (

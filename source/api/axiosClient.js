@@ -1,7 +1,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-export const BASE_URL = `http://192.168.1.128:8080/boarding_house/api`;
+export const BASE_URL = `http://192.168.1.241:8080/boarding_house/api`;
 export const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 5000,
@@ -9,6 +9,15 @@ export const axiosInstance = axios.create({
     'Content-Type': 'application/json'
   }
 });
+export const AI_CHAT_BOT_URL = `http://192.168.1.241:8000`
+export const axiosChatBotInstance = axios.create({
+  baseURL: AI_CHAT_BOT_URL,
+  timeout: 40000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 
 
 //Can token 

@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 const Tab = createBottomTabNavigator();
 import { listNotifications } from '../api/notificationApi';
+import ChatBotScreen from '../screens/ChatBotScreen';
 
 export default function MainTabNavigator() {
   // Lấy số thông báo chưa đọc từ backend
@@ -73,6 +74,18 @@ export default function MainTabNavigator() {
         }}
       />
 
+      <Tab.Screen
+        name="ChatBot"
+        component={ChatBotScreen}
+        options={{
+          title: 'Chat Bot',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="robot-outline" color={color} size={size} />
+          ),
+          tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
+        }}
+      />
+
       {/* Tab thông báo */}
       <Tab.Screen
         name="Notifications"
@@ -97,5 +110,6 @@ export default function MainTabNavigator() {
         }}
       />
     </Tab.Navigator>
+
   );
 }

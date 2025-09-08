@@ -24,7 +24,7 @@ const BG = '#F8FAFC';
 const TEXT = '#0F172A';
 const MUTED = '#64748B';
 
-// Nếu bạn đã có danh mục từ BE, hãy fetch và set thay cho mảng tĩnh
+
 const ZONE_AMENITIES = ['Wifi', 'Điều hoà', 'Giữ xe', 'Thang máy', 'Camera', 'Máy giặt chung', 'Sân phơi', 'Khu bếp chung', 'Ban công'];
 const ZONE_TARGETS = ['Đi học', 'Đi làm', 'Gia đình', 'Nữ', 'Nam', 'Nhân viên văn phòng'];
 const ZONE_ENVIRONMENTS = ['Chợ', 'Siêu thị', 'Bến xe', 'Gần trường học', 'Khu văn phòng', 'Khu dân cư yên tĩnh'];
